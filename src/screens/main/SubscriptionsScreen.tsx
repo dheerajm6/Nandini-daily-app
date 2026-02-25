@@ -6,7 +6,8 @@ import 'leaflet/dist/leaflet.css'
 import {
   Plus, MapPin, Check, X, ArrowLeft, Minus,
   Pause, Play, Trash2, ShoppingBag, Zap, RefreshCw,
-  Navigation,
+  Navigation, MoreHorizontal, Palmtree, PauseCircle,
+  XCircle, RotateCcw, CalendarRange,
 } from 'lucide-react'
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
@@ -16,10 +17,16 @@ interface SubProduct {
   qty: number; frequency: string; paused: boolean
 }
 
+type AddrStatus = 'active' | 'on_hold' | 'vacation' | 'ended'
+
 interface Address {
   id: string; nickname: string; houseNo: string; line1: string; city: string
   pincode: string; lat?: number; lng?: number
   planActive: boolean; planDaysLeft: number
+  status: AddrStatus
+  vacationFrom?: string   // ISO date "YYYY-MM-DD"
+  vacationTo?: string
+  endReason?: string
   products: SubProduct[]
 }
 
@@ -130,7 +137,7 @@ const INIT_ADDRESSES: Address[] = [
     id: 'a1', nickname: 'Home', houseNo: 'No. 42', line1: '3rd Cross, Indiranagar',
     city: 'Bengaluru', pincode: '560038',
     lat: 12.9784, lng: 77.6408,
-    planActive: true, planDaysLeft: 18,
+    planActive: true, planDaysLeft: 18, status: 'active' as AddrStatus,
     products: [
       {id:'sp1',name:'Nandini Shubham Milk',variant:'500 ml',price:26, emoji:'🥛',qty:2,frequency:'daily',  paused:false},
       {id:'sp2',name:'Nandini Fresh Curd',  variant:'500 g', price:30, emoji:'🍶',qty:1,frequency:'every3', paused:false},
@@ -316,8 +323,27 @@ function MapPickerView({ onPick }: { onPick: (lat: number, lng: number, addr: Pi
 }
 
 /* ─── Sheet types ────────────────────────────────────────────────────── */
-type SheetType = 'addAddress' | 'activatePlan' | 'addProduct' | null
-type AddStep   = 'cat' | 'products' | 'freq' | 'basket' | 'bag'
+type SheetType  = 'addAddress' | 'activatePlan' | 'addProduct' | 'manage' | null
+type AddStep    = 'cat' | 'products' | 'freq' | 'basket' | 'bag'
+type ManageStep = 'options' | 'vacation' | 'hold' | 'end'
+
+const END_REASONS = [
+  'Moving to another city',
+  'Taking a break / Travel',
+  'Product quality issue',
+  'Delivery not on time',
+  'Too expensive',
+  'Other',
+]
+
+const todayISO = () => new Date().toISOString().split('T')[0]
+const vacDays  = (from: string, to: string) => {
+  if (!from || !to) return 0
+  return Math.max(0, Math.round((new Date(to).getTime() - new Date(from).getTime()) / 86400000) + 1)
+}
+const fmtDate  = (iso: string) => iso
+  ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  : ''
 
 /* ─── Screen ─────────────────────────────────────────────────────────── */
 export default function SubscriptionsScreen() {
@@ -335,6 +361,11 @@ export default function SubscriptionsScreen() {
   const [addrForm, setAddrForm]       = useState({ nickname: '', houseNo: '', line1: '', city: '', pincode: '' })
   const [addrCoords, setAddrCoords]   = useState<{lat:number;lng:number} | null>(null)
   const [addrError, setAddrError]     = useState('')
+  // Manage sheet
+  const [manageStep, setManageStep]   = useState<ManageStep>('options')
+  const [vacFrom, setVacFrom]         = useState('')
+  const [vacTo, setVacTo]             = useState('')
+  const [endReason, setEndReason]     = useState('')
 
   /* ── helpers ─────────────────────────────────── */
   const monthlyEst = (products: SubProduct[]) =>
@@ -354,6 +385,58 @@ export default function SubscriptionsScreen() {
     setSelFreq('daily'); setSelQty(1); setBasketAdded(new Set())
     setAddrError(''); setAddrCoords(null)
     setAddrForm({ nickname: '', houseNo: '', line1: '', city: '', pincode: '' })
+    setManageStep('options'); setVacFrom(''); setVacTo(''); setEndReason('')
+  }
+
+  const updateAddr = (id: string, patch: Partial<Address>) =>
+    setAddresses(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a))
+
+  /* ── Manage actions ─────────────────────────────────── */
+  const openManage = (addrId: string) => {
+    setActiveId(addrId); setManageStep('options'); setSheet('manage')
+  }
+
+  const handleHold = () => {
+    updateAddr(activeId!, { status: 'on_hold' })
+    closeSheet()
+  }
+
+  const handleResume = (addrId: string) => {
+    updateAddr(addrId, { status: 'active', vacationFrom: undefined, vacationTo: undefined })
+  }
+
+  const handleSetVacation = () => {
+    if (!vacFrom || !vacTo || vacFrom >= vacTo) return
+    const days = vacDays(vacFrom, vacTo)
+    updateAddr(activeId!, {
+      status: 'vacation',
+      vacationFrom: vacFrom,
+      vacationTo: vacTo,
+      planDaysLeft: (addresses.find(a => a.id === activeId)?.planDaysLeft ?? 0) + days,
+    })
+    closeSheet()
+  }
+
+  const handleCancelVacation = (addrId: string) => {
+    const addr = addresses.find(a => a.id === addrId)
+    if (!addr) return
+    const days = vacDays(addr.vacationFrom ?? '', addr.vacationTo ?? '')
+    updateAddr(addrId, {
+      status: 'active',
+      vacationFrom: undefined,
+      vacationTo: undefined,
+      planDaysLeft: Math.max(0, (addr.planDaysLeft ?? 0) - days),
+    })
+  }
+
+  const handleEndSubscription = () => {
+    updateAddr(activeId!, {
+      status: 'ended',
+      planActive: false,
+      products: [],
+      endReason: endReason || 'Not specified',
+    })
+    closeSheet()
   }
 
   /* ── actions ─────────────────────────────────── */
@@ -381,7 +464,7 @@ export default function SubscriptionsScreen() {
       pincode:  addrForm.pincode.trim(),
       lat: addrCoords?.lat,
       lng: addrCoords?.lng,
-      planActive: false, planDaysLeft: 0, products: [],
+      planActive: false, planDaysLeft: 0, status: 'active' as AddrStatus, products: [],
     }])
     closeSheet()
   }
@@ -437,6 +520,13 @@ export default function SubscriptionsScreen() {
   const sheetTitle = (): string => {
     if (sheet === 'addAddress')   return 'Add Delivery Address'
     if (sheet === 'activatePlan') return 'Delivery Plan'
+    if (sheet === 'manage') {
+      const nick = addresses.find(a => a.id === activeId)?.nickname ?? ''
+      if (manageStep === 'options')  return `Manage · ${nick}`
+      if (manageStep === 'vacation') return 'Vacation Mode'
+      if (manageStep === 'hold')     return 'Hold Plan'
+      if (manageStep === 'end')      return 'End Subscription'
+    }
     if (sheet === 'addProduct') {
       if (addStep === 'cat')      return 'Choose Category'
       if (addStep === 'products') return SUB_CATS.find(c => c.id === selCat)?.name ?? 'Products'
@@ -448,7 +538,9 @@ export default function SubscriptionsScreen() {
   }
 
   const sheetBack = () => {
-    if (sheet === 'addProduct') {
+    if (sheet === 'manage' && manageStep !== 'options') {
+      setManageStep('options')
+    } else if (sheet === 'addProduct') {
       if (addStep === 'products') { setAddStep('cat'); setSelCat(null) }
       else if (addStep === 'freq') { setAddStep('products'); setSelProd(null) }
       else closeSheet()
@@ -457,7 +549,8 @@ export default function SubscriptionsScreen() {
     }
   }
 
-  const canGoBack = sheet === 'addProduct' && (addStep === 'products' || addStep === 'freq')
+  const canGoBack = (sheet === 'manage' && manageStep !== 'options')
+    || (sheet === 'addProduct' && (addStep === 'products' || addStep === 'freq'))
   const stepIndex: Record<AddStep, number> = { cat: 0, products: 1, freq: 2, basket: 3, bag: 3 }
 
   /* ─────────────────────────────────────────────────────────────────── */
@@ -540,8 +633,18 @@ export default function SubscriptionsScreen() {
 
           {/* Address cards */}
           {addresses.map((addr, i) => {
-            const est = monthlyEst(addr.products)
+            const est         = monthlyEst(addr.products)
             const pausedCount = addr.products.filter(p => p.paused).length
+            const isHeld      = addr.status === 'on_hold'
+            const isVacation  = addr.status === 'vacation'
+            const isEnded     = addr.status === 'ended'
+            const isActive    = addr.status === 'active'
+            const topBarBg    = isEnded   ? '#E0E0E0'
+                              : isHeld    ? 'linear-gradient(90deg,#F59E0B,#FCD34D)'
+                              : isVacation? 'linear-gradient(90deg,#06B6D4,#22D3EE)'
+                              : addr.planActive ? 'linear-gradient(90deg,#0055A5,#4facfe)'
+                              : '#E0E0E0'
+
             return (
               <motion.div
                 key={addr.id}
@@ -549,25 +652,27 @@ export default function SubscriptionsScreen() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.07 }}
                 className="bg-white rounded-2xl overflow-hidden"
-                style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}
+                style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.07)', opacity: isEnded ? 0.75 : 1 }}
               >
-                <div className="h-1" style={{ background: addr.planActive ? 'linear-gradient(90deg,#0055A5,#4facfe)' : '#E0E0E0' }} />
+                <div className="h-1" style={{ background: topBarBg }} />
 
                 {/* Card header */}
                 <div className="flex items-start gap-3 px-4 pt-3.5 pb-3">
                   <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                    style={{ background: addr.planActive ? '#EBF5FF' : '#F2F2F7' }}>
-                    <MapPin className="w-[18px] h-[18px]" style={{ color: addr.planActive ? '#0055A5' : '#8E8E93' }} />
+                    style={{ background: isVacation ? '#E0F7FA' : isHeld ? '#FFF8E1' : addr.planActive ? '#EBF5FF' : '#F2F2F7' }}>
+                    <MapPin className="w-[18px] h-[18px]"
+                      style={{ color: isVacation ? '#06B6D4' : isHeld ? '#F59E0B' : addr.planActive ? '#0055A5' : '#8E8E93' }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-[16px] font-bold text-[#1C1C1E]">{addr.nickname}</p>
-                      {addr.planActive
-                        ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#EBF5FF', color: '#0055A5' }}>{addr.planDaysLeft}d left</span>
-                        : <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#F2F2F7] text-[#8E8E93]">No plan</span>
-                      }
-                      {pausedCount > 0 && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#FFF3E0', color: '#E65100' }}>
+                      {isEnded   && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#F2F2F7] text-[#8E8E93]">Ended</span>}
+                      {isHeld    && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background:'#FFF8E1',color:'#B45309' }}>On Hold</span>}
+                      {isVacation&& <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background:'#E0F7FA',color:'#0891B2' }}>Vacation</span>}
+                      {isActive && addr.planActive && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background:'#EBF5FF',color:'#0055A5' }}>{addr.planDaysLeft}d left</span>}
+                      {!addr.planActive && !isEnded && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#F2F2F7] text-[#8E8E93]">No plan</span>}
+                      {pausedCount > 0 && isActive && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background:'#FFF3E0',color:'#E65100' }}>
                           {pausedCount} paused
                         </span>
                       )}
@@ -576,10 +681,75 @@ export default function SubscriptionsScreen() {
                       {addr.houseNo ? `${addr.houseNo}, ` : ''}{addr.line1 ? `${addr.line1}, ` : ''}{addr.city}{addr.pincode ? ` – ${addr.pincode}` : ''}
                     </p>
                   </div>
+                  {/* ⋯ manage menu — only when plan is active and not ended */}
+                  {addr.planActive && !isEnded && (
+                    <button
+                      onClick={() => openManage(addr.id)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 active:bg-[#F2F2F7]"
+                    >
+                      <MoreHorizontal className="w-4 h-4 text-[#8E8E93]" />
+                    </button>
+                  )}
                 </div>
 
-                {/* Plan not active */}
-                {!addr.planActive && (
+                {/* ── Status banners ── */}
+                {isHeld && (
+                  <div className="mx-4 mb-3 px-4 py-3 rounded-xl flex items-center gap-3"
+                    style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+                    <PauseCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#D97706' }} />
+                    <div className="flex-1">
+                      <p className="text-[13px] font-semibold text-[#92400E]">Deliveries on hold</p>
+                      <p className="text-[11px] text-[#B45309]">Your plan days are frozen — resume anytime</p>
+                    </div>
+                    <button onClick={() => handleResume(addr.id)}
+                      className="px-3 py-1.5 rounded-full text-[12px] font-bold text-white active:opacity-80"
+                      style={{ background: '#D97706' }}>
+                      Resume
+                    </button>
+                  </div>
+                )}
+
+                {isVacation && addr.vacationFrom && addr.vacationTo && (
+                  <div className="mx-4 mb-3 px-4 py-3 rounded-xl" style={{ background: '#E0F7FA', border: '1px solid #A5F3FC' }}>
+                    <div className="flex items-start gap-3">
+                      <Palmtree className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#0891B2' }} />
+                      <div className="flex-1">
+                        <p className="text-[13px] font-semibold" style={{ color: '#0C4A6E' }}>Vacation mode active</p>
+                        <p className="text-[11px] mt-0.5" style={{ color: '#0891B2' }}>
+                          {fmtDate(addr.vacationFrom)} → {fmtDate(addr.vacationTo)}
+                          <span className="ml-1.5 font-bold">· {vacDays(addr.vacationFrom, addr.vacationTo)} days</span>
+                        </p>
+                        <p className="text-[11px] mt-0.5" style={{ color: '#0891B2' }}>
+                          Auto-resumes · {vacDays(addr.vacationFrom, addr.vacationTo)}d added to your plan
+                        </p>
+                      </div>
+                      <button onClick={() => handleCancelVacation(addr.id)}
+                        className="text-[11px] font-bold px-2.5 py-1.5 rounded-full active:opacity-70"
+                        style={{ background: '#BAE6FD', color: '#0369A1' }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {isEnded && (
+                  <div className="mx-4 mb-3 px-4 py-3 rounded-xl flex items-center gap-3"
+                    style={{ background: '#F9F9F9', border: '1px dashed #D0D0D0' }}>
+                    <XCircle className="w-5 h-5 flex-shrink-0 text-[#AEAEB2]" />
+                    <div className="flex-1">
+                      <p className="text-[13px] font-semibold text-[#8E8E93]">Subscription ended</p>
+                      {addr.endReason && <p className="text-[11px] text-[#AEAEB2]">Reason: {addr.endReason}</p>}
+                    </div>
+                    <button onClick={() => { setActiveId(addr.id); setSheet('activatePlan') }}
+                      className="px-3 py-1.5 rounded-full text-[12px] font-bold text-white active:opacity-80"
+                      style={{ background: '#0055A5' }}>
+                      Reactivate
+                    </button>
+                  </div>
+                )}
+
+                {/* Plan not active (never activated) */}
+                {!addr.planActive && !isEnded && (
                   <div className="px-4 pb-4">
                     <div className="rounded-xl p-3 mb-3" style={{ background: '#F5F5FF', border: '1.5px dashed #C0C0E0' }}>
                       <p className="text-[13px] text-[#5C5C8A] text-center leading-relaxed">
@@ -596,9 +766,9 @@ export default function SubscriptionsScreen() {
                   </div>
                 )}
 
-                {/* Plan active */}
-                {addr.planActive && (
-                  <div>
+                {/* Plan active — products + footer */}
+                {addr.planActive && !isEnded && (
+                  <div style={{ opacity: isHeld || isVacation ? 0.5 : 1 }}>
                     <div className="h-px mx-4 bg-[#F2F2F7]" />
                     {addr.products.length > 0 && (
                       <div className="px-4 py-3 space-y-3">
@@ -621,18 +791,20 @@ export default function SubscriptionsScreen() {
                                 </span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <button onClick={() => togglePause(addr.id, prod.id)}
-                                className="w-7 h-7 rounded-full flex items-center justify-center active:scale-90"
-                                style={{ background: prod.paused ? '#EBF5FF' : '#F2F2F7' }}>
-                                {prod.paused ? <Play className="w-3 h-3" style={{ color: '#0055A5' }} /> : <Pause className="w-3 h-3 text-[#8E8E93]" />}
-                              </button>
-                              <button onClick={() => removeProd(addr.id, prod.id)}
-                                className="w-7 h-7 rounded-full flex items-center justify-center active:scale-90"
-                                style={{ background: '#FFF0F0' }}>
-                                <Trash2 className="w-3 h-3" style={{ color: '#FF3B30' }} />
-                              </button>
-                            </div>
+                            {isActive && (
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <button onClick={() => togglePause(addr.id, prod.id)}
+                                  className="w-7 h-7 rounded-full flex items-center justify-center active:scale-90"
+                                  style={{ background: prod.paused ? '#EBF5FF' : '#F2F2F7' }}>
+                                  {prod.paused ? <Play className="w-3 h-3" style={{ color: '#0055A5' }} /> : <Pause className="w-3 h-3 text-[#8E8E93]" />}
+                                </button>
+                                <button onClick={() => removeProd(addr.id, prod.id)}
+                                  className="w-7 h-7 rounded-full flex items-center justify-center active:scale-90"
+                                  style={{ background: '#FFF0F0' }}>
+                                  <Trash2 className="w-3 h-3" style={{ color: '#FF3B30' }} />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -643,23 +815,25 @@ export default function SubscriptionsScreen() {
                         <p className="text-[11px] text-[#AEAEB2] mt-0.5">Add your first product to begin daily deliveries</p>
                       </div>
                     )}
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-[#F2F2F7]">
-                      <div>
-                        <p className="text-[10px] text-[#AEAEB2] uppercase tracking-wide">Est. monthly</p>
-                        <p className="text-[15px] font-bold text-[#1C1C1E]">
-                          ₹{(99 + est).toLocaleString('en-IN')}<span className="text-[11px] font-normal text-[#8E8E93]"> /mo</span>
-                        </p>
-                        {est > 0 && <p className="text-[10px] text-[#AEAEB2]">₹99 plan + ₹{est.toLocaleString('en-IN')} products</p>}
+                    {isActive && (
+                      <div className="flex items-center justify-between px-4 py-3 border-t border-[#F2F2F7]">
+                        <div>
+                          <p className="text-[10px] text-[#AEAEB2] uppercase tracking-wide">Est. monthly</p>
+                          <p className="text-[15px] font-bold text-[#1C1C1E]">
+                            ₹{(99 + est).toLocaleString('en-IN')}<span className="text-[11px] font-normal text-[#8E8E93]"> /mo</span>
+                          </p>
+                          {est > 0 && <p className="text-[10px] text-[#AEAEB2]">₹99 plan + ₹{est.toLocaleString('en-IN')} products</p>}
+                        </div>
+                        <button
+                          onClick={() => { setActiveId(addr.id); setAddStep('cat'); setSheet('addProduct') }}
+                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold active:opacity-75"
+                          style={{ background: '#EBF5FF', color: '#0055A5' }}
+                        >
+                          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                          Add Product
+                        </button>
                       </div>
-                      <button
-                        onClick={() => { setActiveId(addr.id); setAddStep('cat'); setSheet('addProduct') }}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold active:opacity-75"
-                        style={{ background: '#EBF5FF', color: '#0055A5' }}
-                      >
-                        <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                        Add Product
-                      </button>
-                    </div>
+                    )}
                   </div>
                 )}
               </motion.div>
@@ -734,6 +908,263 @@ export default function SubscriptionsScreen() {
               {/* Scrollable content */}
               <div className="flex-1 overflow-y-auto">
                 <AnimatePresence mode="wait">
+
+                  {/* ── Manage: Options ── */}
+                  {sheet === 'manage' && manageStep === 'options' && (
+                    <motion.div key="manage-options"
+                      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+                      className="px-4 pb-8"
+                    >
+                      {(() => {
+                        const addr = addresses.find(a => a.id === activeId)
+                        if (!addr) return null
+                        return (
+                          <>
+                            {/* Address summary pill */}
+                            <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl mb-5" style={{ background: '#F8F8F8' }}>
+                              <MapPin className="w-4 h-4 flex-shrink-0" style={{ color: '#0055A5' }} />
+                              <div className="min-w-0">
+                                <p className="text-[13px] font-bold text-[#1C1C1E]">{addr.nickname}</p>
+                                <p className="text-[11px] text-[#8E8E93] truncate">{addr.city}{addr.pincode ? ` – ${addr.pincode}` : ''}</p>
+                              </div>
+                              <div className="ml-auto flex-shrink-0">
+                                <span className="text-[11px] font-bold px-2 py-1 rounded-full" style={{ background: '#EBF5FF', color: '#0055A5' }}>
+                                  {addr.planDaysLeft}d left
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2.5">
+                              {/* Vacation Mode */}
+                              <button
+                                onClick={() => setManageStep('vacation')}
+                                className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left active:scale-[0.98] transition-transform"
+                                style={{ background: '#E0F7FA' }}
+                              >
+                                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#BAE6FD' }}>
+                                  <Palmtree className="w-5 h-5" style={{ color: '#0369A1' }} />
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-[15px] font-bold text-[#0C4A6E]">Vacation Mode</p>
+                                  <p className="text-[12px] mt-0.5" style={{ color: '#0891B2' }}>Pause for a date range · paused days carry forward</p>
+                                </div>
+                                <CalendarRange className="w-4 h-4 text-[#0891B2] flex-shrink-0" />
+                              </button>
+
+                              {/* Hold Plan */}
+                              <button
+                                onClick={() => setManageStep('hold')}
+                                className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left active:scale-[0.98] transition-transform"
+                                style={{ background: '#FFFBEB' }}
+                              >
+                                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#FDE68A' }}>
+                                  <PauseCircle className="w-5 h-5" style={{ color: '#92400E' }} />
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-[15px] font-bold text-[#78350F]">Hold Plan</p>
+                                  <p className="text-[12px] mt-0.5 text-[#B45309]">Pause indefinitely · plan days freeze · resume anytime</p>
+                                </div>
+                                <Pause className="w-4 h-4 text-[#B45309] flex-shrink-0" />
+                              </button>
+
+                              {/* End Subscription */}
+                              <button
+                                onClick={() => setManageStep('end')}
+                                className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left active:scale-[0.98] transition-transform"
+                                style={{ background: '#FFF5F5' }}
+                              >
+                                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#FEE2E2' }}>
+                                  <XCircle className="w-5 h-5 text-[#DC2626]" />
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-[15px] font-bold text-[#991B1B]">End Subscription</p>
+                                  <p className="text-[12px] mt-0.5 text-[#EF4444]">Cancel · unused days credited to wallet (₹3/day)</p>
+                                </div>
+                                <Trash2 className="w-4 h-4 text-[#EF4444] flex-shrink-0" />
+                              </button>
+                            </div>
+                          </>
+                        )
+                      })()}
+                    </motion.div>
+                  )}
+
+                  {/* ── Manage: Vacation ── */}
+                  {sheet === 'manage' && manageStep === 'vacation' && (
+                    <motion.div key="manage-vacation"
+                      initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.18 }} className="px-4 pb-8"
+                    >
+                      <div className="rounded-2xl p-4 mb-5 text-center" style={{ background: 'linear-gradient(135deg,#E0F7FA,#BAE6FD)' }}>
+                        <div className="text-[48px] mb-1">🏖️</div>
+                        <p className="text-[15px] font-bold text-[#0C4A6E]">Going somewhere?</p>
+                        <p className="text-[12px] text-[#0891B2] mt-1 leading-relaxed">
+                          Pause deliveries for your trip. Every paused day is automatically added back to your plan.
+                        </p>
+                      </div>
+
+                      <div className="space-y-3 mb-4">
+                        <div>
+                          <label className="text-[12px] font-semibold text-[#8E8E93] uppercase tracking-wide">Leaving on</label>
+                          <input
+                            type="date"
+                            value={vacFrom}
+                            min={todayISO()}
+                            onChange={e => { setVacFrom(e.target.value); if (vacTo && e.target.value >= vacTo) setVacTo('') }}
+                            className="mt-1.5 w-full px-4 py-3 rounded-xl bg-[#F2F2F7] text-[15px] text-[#1C1C1E] outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[12px] font-semibold text-[#8E8E93] uppercase tracking-wide">Returning on</label>
+                          <input
+                            type="date"
+                            value={vacTo}
+                            min={vacFrom || todayISO()}
+                            onChange={e => setVacTo(e.target.value)}
+                            className="mt-1.5 w-full px-4 py-3 rounded-xl bg-[#F2F2F7] text-[15px] text-[#1C1C1E] outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {vacFrom && vacTo && vacFrom < vacTo && (() => {
+                        const days = vacDays(vacFrom, vacTo)
+                        const addr = addresses.find(a => a.id === activeId)
+                        const newDaysLeft = (addr?.planDaysLeft ?? 0) + days
+                        return (
+                          <div className="px-4 py-3 rounded-xl mb-5" style={{ background: '#E0F7FA' }}>
+                            <div className="flex justify-between mb-1">
+                              <span className="text-[13px] text-[#0891B2]">Paused days</span>
+                              <span className="text-[13px] font-bold text-[#0369A1]">{days} days</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-[13px] text-[#0891B2]">Plan days after return</span>
+                              <span className="text-[13px] font-bold text-[#0369A1]">{newDaysLeft} days</span>
+                            </div>
+                            <p className="text-[11px] text-[#0891B2] mt-1.5">
+                              Deliveries auto-resume on {fmtDate(vacTo)}
+                            </p>
+                          </div>
+                        )
+                      })()}
+
+                      <button
+                        onClick={handleSetVacation}
+                        disabled={!vacFrom || !vacTo || vacFrom >= vacTo}
+                        className="w-full py-3.5 rounded-xl text-white font-semibold text-[15px] active:opacity-85 disabled:opacity-40"
+                        style={{ background: 'linear-gradient(135deg,#0891B2,#06B6D4)' }}
+                      >
+                        Set Vacation Mode
+                      </button>
+                    </motion.div>
+                  )}
+
+                  {/* ── Manage: Hold ── */}
+                  {sheet === 'manage' && manageStep === 'hold' && (
+                    <motion.div key="manage-hold"
+                      initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.18 }} className="px-4 pb-8"
+                    >
+                      <div className="rounded-2xl p-5 mb-5 text-center" style={{ background: 'linear-gradient(135deg,#FFFBEB,#FEF3C7)' }}>
+                        <div className="text-[48px] mb-1">⏸️</div>
+                        <p className="text-[15px] font-bold text-[#78350F]">Hold your plan</p>
+                        <p className="text-[13px] text-[#B45309] mt-1 leading-relaxed">
+                          Pause all deliveries at <strong>{addresses.find(a=>a.id===activeId)?.nickname}</strong> until you're ready to resume.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2.5 mb-6">
+                        {[
+                          { icon:'❄️', t:'Plan days are frozen',        s:'No days counted during the hold'  },
+                          { icon:'📦', t:'All products saved',          s:'Schedule & quantities unchanged'  },
+                          { icon:'▶️', t:'Resume with one tap',         s:'Deliveries restart next morning'  },
+                        ].map(p => (
+                          <div key={p.t} className="flex items-start gap-3 px-4 py-3 rounded-xl" style={{ background: '#FFFBEB' }}>
+                            <span className="text-[18px] flex-shrink-0">{p.icon}</span>
+                            <div>
+                              <p className="text-[13px] font-semibold text-[#78350F]">{p.t}</p>
+                              <p className="text-[11px] text-[#B45309]">{p.s}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={handleHold}
+                        className="w-full py-3.5 rounded-xl text-white font-semibold text-[15px] active:opacity-85"
+                        style={{ background: 'linear-gradient(135deg,#D97706,#F59E0B)' }}
+                      >
+                        Hold Plan
+                      </button>
+                      <button onClick={() => setManageStep('options')}
+                        className="w-full py-3 text-[14px] font-semibold text-[#8E8E93] mt-1 active:opacity-70">
+                        Cancel
+                      </button>
+                    </motion.div>
+                  )}
+
+                  {/* ── Manage: End ── */}
+                  {sheet === 'manage' && manageStep === 'end' && (() => {
+                    const addr = addresses.find(a => a.id === activeId)
+                    const credit = (addr?.planDaysLeft ?? 0) * 3
+                    return (
+                      <motion.div key="manage-end"
+                        initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.18 }} className="px-4 pb-8"
+                      >
+                        {/* Refund preview */}
+                        <div className="rounded-2xl p-4 mb-5" style={{ background: '#FFF5F5', border: '1.5px solid #FCA5A5' }}>
+                          <div className="flex items-center gap-3 mb-3">
+                            <XCircle className="w-5 h-5 text-[#DC2626] flex-shrink-0" />
+                            <p className="text-[14px] font-bold text-[#991B1B]">Before you go</p>
+                          </div>
+                          <div className="flex justify-between items-center py-2 border-b border-[#FCA5A5]">
+                            <span className="text-[13px] text-[#EF4444]">Remaining delivery days</span>
+                            <span className="text-[14px] font-bold text-[#991B1B]">{addr?.planDaysLeft ?? 0} days</span>
+                          </div>
+                          <div className="flex justify-between items-center py-2">
+                            <span className="text-[13px] text-[#EF4444]">Wallet credit (₹3/day)</span>
+                            <span className="text-[16px] font-black text-[#16A34A]">+₹{credit}</span>
+                          </div>
+                          <p className="text-[11px] text-[#EF4444] mt-1">
+                            ₹{credit} will be added to your Delivery Wallet
+                          </p>
+                        </div>
+
+                        {/* Reason */}
+                        <p className="text-[13px] font-semibold text-[#1C1C1E] mb-2.5">Why are you leaving? <span className="font-normal text-[#8E8E93]">(optional)</span></p>
+                        <div className="space-y-2 mb-6">
+                          {END_REASONS.map(reason => (
+                            <button key={reason}
+                              onClick={() => setEndReason(reason)}
+                              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-colors text-left active:scale-[0.98]"
+                              style={{
+                                borderColor: endReason === reason ? '#EF4444' : 'transparent',
+                                background:  endReason === reason ? '#FFF5F5' : '#F8F8F8',
+                              }}
+                            >
+                              <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                                style={{ borderColor: endReason === reason ? '#EF4444' : '#C7C7CC' }}>
+                                {endReason === reason && <div className="w-2 h-2 rounded-full bg-[#EF4444]" />}
+                              </div>
+                              <p className="text-[14px] font-medium text-[#1C1C1E]">{reason}</p>
+                            </button>
+                          ))}
+                        </div>
+
+                        <button
+                          onClick={handleEndSubscription}
+                          className="w-full py-3.5 rounded-xl text-white font-semibold text-[15px] active:opacity-85"
+                          style={{ background: 'linear-gradient(135deg,#DC2626,#EF4444)' }}
+                        >
+                          End Subscription{credit > 0 ? ` · ₹${credit} to wallet` : ''}
+                        </button>
+                        <button onClick={() => setManageStep('options')}
+                          className="w-full py-3 text-[14px] font-semibold text-[#8E8E93] mt-1 active:opacity-70">
+                          Cancel
+                        </button>
+                      </motion.div>
+                    )
+                  })()}
 
                   {/* ── Add Address ── */}
                   {sheet === 'addAddress' && (
