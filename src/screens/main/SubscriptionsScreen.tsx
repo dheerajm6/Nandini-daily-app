@@ -17,7 +17,7 @@ interface SubProduct {
 }
 
 interface Address {
-  id: string; nickname: string; line1: string; city: string
+  id: string; nickname: string; houseNo: string; line1: string; city: string
   pincode: string; lat?: number; lng?: number
   planActive: boolean; planDaysLeft: number
   products: SubProduct[]
@@ -127,7 +127,7 @@ const NICKNAME_CHIPS = ['🏠 Home', '👴 Parents', '💒 In-Laws', '🏢 Offic
 
 const INIT_ADDRESSES: Address[] = [
   {
-    id: 'a1', nickname: 'Home', line1: '42, 3rd Cross, Indiranagar',
+    id: 'a1', nickname: 'Home', houseNo: 'No. 42', line1: '3rd Cross, Indiranagar',
     city: 'Bengaluru', pincode: '560038',
     lat: 12.9784, lng: 77.6408,
     planActive: true, planDaysLeft: 18,
@@ -188,7 +188,7 @@ function MapPickerView({ onPick }: { onPick: (lat: number, lng: number, addr: Pi
       )
       const data = await res.json()
       const a = data.address ?? {}
-      const parts = [a.house_number, a.road, a.neighbourhood || a.suburb || a.quarter].filter(Boolean)
+      const parts = [a.road, a.neighbourhood || a.suburb || a.quarter].filter(Boolean)
       const result: PickedAddr = {
         line1:   parts.join(', '),
         city:    a.city || a.town || a.village || a.state_district || '',
@@ -332,7 +332,7 @@ export default function SubscriptionsScreen() {
   const [bagOffered, setBagOffered]   = useState(false)
   const [bagAdded, setBagAdded]       = useState(false)
   const [basketAdded, setBasketAdded] = useState<Set<string>>(new Set())
-  const [addrForm, setAddrForm]       = useState({ nickname: '', line1: '', city: '', pincode: '' })
+  const [addrForm, setAddrForm]       = useState({ nickname: '', houseNo: '', line1: '', city: '', pincode: '' })
   const [addrCoords, setAddrCoords]   = useState<{lat:number;lng:number} | null>(null)
   const [addrError, setAddrError]     = useState('')
 
@@ -353,7 +353,7 @@ export default function SubscriptionsScreen() {
     setAddStep('cat'); setSelCat(null); setSelProd(null)
     setSelFreq('daily'); setSelQty(1); setBasketAdded(new Set())
     setAddrError(''); setAddrCoords(null)
-    setAddrForm({ nickname: '', line1: '', city: '', pincode: '' })
+    setAddrForm({ nickname: '', houseNo: '', line1: '', city: '', pincode: '' })
   }
 
   /* ── actions ─────────────────────────────────── */
@@ -364,13 +364,18 @@ export default function SubscriptionsScreen() {
   }
 
   const handleAddAddress = () => {
-    if (!addrForm.nickname.trim() || !addrForm.city.trim()) {
-      setAddrError('Nickname and city are required')
+    if (!addrForm.nickname.trim() || !addrForm.houseNo.trim()) {
+      setAddrError('Nickname and house/flat number are required')
+      return
+    }
+    if (!addrForm.city.trim()) {
+      setAddrError('Please pick a location on the map or enter the city')
       return
     }
     setAddresses(prev => [...prev, {
       id: `a${Date.now()}`,
       nickname: addrForm.nickname.trim(),
+      houseNo:  addrForm.houseNo.trim(),
       line1:    addrForm.line1.trim(),
       city:     addrForm.city.trim(),
       pincode:  addrForm.pincode.trim(),
@@ -568,7 +573,7 @@ export default function SubscriptionsScreen() {
                       )}
                     </div>
                     <p className="text-[12px] text-[#8E8E93] truncate">
-                      {addr.line1 ? `${addr.line1}, ` : ''}{addr.city}{addr.pincode ? ` ${addr.pincode}` : ''}
+                      {addr.houseNo ? `${addr.houseNo}, ` : ''}{addr.line1 ? `${addr.line1}, ` : ''}{addr.city}{addr.pincode ? ` – ${addr.pincode}` : ''}
                     </p>
                   </div>
                 </div>
@@ -763,8 +768,10 @@ export default function SubscriptionsScreen() {
 
                       {/* Fields */}
                       <div className="space-y-3">
+
+                        {/* Nickname */}
                         <div>
-                          <label className="text-[12px] font-semibold text-[#8E8E93] uppercase tracking-wide">Nickname</label>
+                          <label className="text-[12px] font-semibold text-[#8E8E93] uppercase tracking-wide">Label</label>
                           <input
                             value={addrForm.nickname}
                             onChange={e => setAddrForm(f => ({ ...f, nickname: e.target.value }))}
@@ -772,15 +779,41 @@ export default function SubscriptionsScreen() {
                             className="mt-1.5 w-full px-4 py-3 rounded-xl bg-[#F2F2F7] text-[15px] text-[#1C1C1E] outline-none placeholder:text-[#AEAEB2]"
                           />
                         </div>
+
+                        {/* House No — always manual */}
                         <div>
-                          <label className="text-[12px] font-semibold text-[#8E8E93] uppercase tracking-wide">Address</label>
+                          <label className="text-[12px] font-semibold text-[#1C1C1E] uppercase tracking-wide">
+                            House No / Flat / Apartment <span className="text-[#FF3B30]">*</span>
+                          </label>
+                          <input
+                            value={addrForm.houseNo}
+                            onChange={e => setAddrForm(f => ({ ...f, houseNo: e.target.value }))}
+                            placeholder="e.g. 42, Flat 3B, Prestige Towers"
+                            className="mt-1.5 w-full px-4 py-3 rounded-xl text-[15px] text-[#1C1C1E] outline-none placeholder:text-[#AEAEB2]"
+                            style={{ background: '#FFF8E1', border: '1.5px solid #FFD54F' }}
+                          />
+                          <p className="text-[11px] text-[#8E8E93] mt-1 ml-1">Enter manually — GPS cannot detect your exact flat/unit</p>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="flex items-center gap-2 py-1">
+                          <div className="flex-1 h-px bg-[#F2F2F7]" />
+                          <p className="text-[11px] font-semibold text-[#AEAEB2] uppercase tracking-wide">Auto-filled from map</p>
+                          <div className="flex-1 h-px bg-[#F2F2F7]" />
+                        </div>
+
+                        {/* Street & Area — auto-filled, editable */}
+                        <div>
+                          <label className="text-[12px] font-semibold text-[#8E8E93] uppercase tracking-wide">Street & Area</label>
                           <input
                             value={addrForm.line1}
                             onChange={e => setAddrForm(f => ({ ...f, line1: e.target.value }))}
-                            placeholder="House/Flat no, Street, Area"
+                            placeholder="Pick location on map above"
                             className="mt-1.5 w-full px-4 py-3 rounded-xl bg-[#F2F2F7] text-[15px] text-[#1C1C1E] outline-none placeholder:text-[#AEAEB2]"
                           />
                         </div>
+
+                        {/* City + Pincode side by side — auto-filled */}
                         <div className="flex gap-3">
                           <div className="flex-1">
                             <label className="text-[12px] font-semibold text-[#8E8E93] uppercase tracking-wide">City</label>
