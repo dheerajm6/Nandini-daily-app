@@ -21,7 +21,7 @@ const ADDRESSES = [
 // ── Per-address wallet data ───────────────────────────────────────────────────
 const WALLET_DATA: Record<string, { product: number; delivery: number; deliveriesUsed: number; deliveriesTotal: number }> = {
   home:  { product: 1200, delivery: 201, deliveriesUsed: 18, deliveriesTotal: 30 },
-  work:  { product: 800,  delivery: 99,  deliveriesUsed: 10, deliveriesTotal: 30 },
+  work:  { product: 800,  delivery: 149, deliveriesUsed: 10, deliveriesTotal: 30 },
   other: { product: 350,  delivery: 0,   deliveriesUsed: 0,  deliveriesTotal: 0  },
 }
 const TOTAL_PRODUCT  = Object.values(WALLET_DATA).reduce((s, v) => s + v.product, 0)
@@ -44,10 +44,10 @@ const TRANSACTIONS: Transaction[] = [
   { id: 1, type: 'credit', category: 'loaded',   address: 'home',  label: 'Money Added',          amount: 1500, date: '22 Feb', icon: '💳' },
   { id: 2, type: 'debit',  category: 'product',  address: 'home',  label: 'Full Cream Milk 1L',   amount: 68,   date: '20 Feb', icon: '🥛' },
   { id: 3, type: 'debit',  category: 'product',  address: 'work',  label: 'Toned Milk 500 ml',    amount: 22,   date: '20 Feb', icon: '🥛' },
-  { id: 4, type: 'debit',  category: 'delivery', address: 'home',  label: 'Delivery Plan · Feb',  amount: 99,   date: '18 Feb', icon: '🚚' },
+  { id: 4, type: 'debit',  category: 'delivery', address: 'home',  label: 'Delivery Plan · Feb',  amount: 149,  date: '18 Feb', icon: '🚚' },
   { id: 5, type: 'debit',  category: 'product',  address: 'home',  label: 'Fresh Curd 400 g',     amount: 48,   date: '18 Feb', icon: '🍶' },
   { id: 6, type: 'credit', category: 'loaded',   address: 'work',  label: 'Money Added',          amount: 800,  date: '15 Feb', icon: '💳' },
-  { id: 7, type: 'debit',  category: 'delivery', address: 'work',  label: 'Delivery Plan · Feb',  amount: 99,   date: '15 Feb', icon: '🚚' },
+  { id: 7, type: 'debit',  category: 'delivery', address: 'work',  label: 'Delivery Plan · Feb',  amount: 149,  date: '15 Feb', icon: '🚚' },
   { id: 8, type: 'debit',  category: 'product',  address: 'home',  label: 'Pure Ghee 500 ml',     amount: 285,  date: '15 Feb', icon: '✨' },
   { id: 9, type: 'credit', category: 'loaded',   address: 'other', label: 'Money Added',          amount: 350,  date: '10 Feb', icon: '💳' },
 ]
@@ -135,8 +135,8 @@ function AddressDropdown({
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function WalletScreen() {
   const { userMode } = useApp()
-  const PLAN_PRICE     = userMode === 'business' ? 299 : 99
-  const PRESET_AMOUNTS = userMode === 'business' ? [299, 598, 1000, 2000, 5000] : [99, 198, 500, 1000, 2000]
+  const PLAN_PRICE     = userMode === 'business' ? 399 : 149
+  const PRESET_AMOUNTS = userMode === 'business' ? [399, 798, 1000, 2000, 5000] : [149, 298, 500, 1000, 2000]
 
   const [selectedAddr, setSelectedAddr] = useState(ADDRESSES[0])
   const [dropdownOpen, setDropdownOpen] = useState(false)
