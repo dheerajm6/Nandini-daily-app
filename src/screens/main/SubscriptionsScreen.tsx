@@ -349,7 +349,7 @@ const fmtDate  = (iso: string) => iso
 /* ─── Screen ─────────────────────────────────────────────────────────── */
 export default function SubscriptionsScreen() {
   const { userMode } = useApp()
-  const planPrice = userMode === 'business' ? 299 : 99
+  const planPrice = userMode === 'business' ? 399 : 149
   const [addresses, setAddresses]     = useState<Address[]>(INIT_ADDRESSES)
   const [sheet, setSheet]             = useState<SheetType>(null)
   const [activeId, setActiveId]       = useState<string | null>(null)
@@ -629,7 +629,7 @@ export default function SubscriptionsScreen() {
                 >
                   Add Your First Address
                 </button>
-                <p className="text-[11px] text-[#AEAEB2] mt-3">₹99/month per address · ₹3 per delivery</p>
+                <p className="text-[11px] text-[#AEAEB2] mt-3">₹149/month per address · ₹3 per delivery</p>
               </div>
             </motion.div>
           )}
@@ -756,7 +756,7 @@ export default function SubscriptionsScreen() {
                   <div className="px-4 pb-4">
                     <div className="rounded-xl p-3 mb-3" style={{ background: '#F5F5FF', border: '1.5px dashed #C0C0E0' }}>
                       <p className="text-[13px] text-[#5C5C8A] text-center leading-relaxed">
-                        Activate a ₹99/month plan to start subscribing products at this address
+                        Activate a ₹149/month plan to start subscribing products at this address
                       </p>
                     </div>
                     <button
@@ -764,7 +764,7 @@ export default function SubscriptionsScreen() {
                       className="w-full py-2.5 rounded-xl text-white text-[14px] font-semibold active:opacity-85"
                       style={{ background: '#0055A5' }}
                     >
-                      Activate Plan · ₹99/mo
+                      Activate Plan · ₹149/mo
                     </button>
                   </div>
                 )}
@@ -1336,7 +1336,7 @@ export default function SubscriptionsScreen() {
                         {addrCoords ? 'Save Address' : 'Add Address'}
                       </button>
                       <p className="text-[11px] text-[#AEAEB2] text-center mt-3">
-                        Each address has a separate ₹99/month delivery plan
+                        Each address has a separate ₹149/month delivery plan
                       </p>
                     </motion.div>
                   )}
@@ -1349,7 +1349,7 @@ export default function SubscriptionsScreen() {
                     >
                       <div className="rounded-2xl p-5 mb-4 text-center" style={{ background: 'linear-gradient(135deg,#0055A5,#0099CC)' }}>
                         <p className="text-[13px] text-white/70 mb-0.5">Nandini Daily</p>
-                        <p className="text-[42px] font-black text-white tracking-tight leading-none">₹99</p>
+                        <p className="text-[42px] font-black text-white tracking-tight leading-none">₹149</p>
                         <p className="text-[14px] text-white/80 mt-1">per month</p>
                         <div className="mt-3 inline-block px-3 py-1 rounded-full bg-white/20">
                           <p className="text-[12px] text-white font-semibold">30 deliveries included · ₹3 each</p>
@@ -1375,7 +1375,7 @@ export default function SubscriptionsScreen() {
                       <button onClick={handleActivatePlan}
                         className="w-full py-3.5 rounded-xl text-white font-semibold text-[15px] active:opacity-85"
                         style={{ background: 'linear-gradient(135deg,#0055A5,#0077CC)' }}>
-                        Activate Plan · ₹99
+                        Activate Plan · ₹149
                       </button>
                       <p className="text-[11px] text-[#AEAEB2] text-center mt-2.5">Next step: choose your products</p>
                     </motion.div>
