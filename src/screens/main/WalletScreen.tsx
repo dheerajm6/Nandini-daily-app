@@ -342,7 +342,7 @@ export default function WalletScreen() {
                         />
                       </div>
                       <p className="text-[11px] mt-2" style={{ color: '#8E8E93' }}>
-                        Just <span className="font-bold text-[#0055A5]">₹{(PLAN_PRICE / wallet.deliveriesTotal).toFixed(0)}</span> per delivery
+                        Just <span className="font-bold text-[#0055A5]">₹{(Math.floor(PLAN_PRICE * 10 / wallet.deliveriesTotal) / 10).toFixed(1)}</span> per delivery
                       </p>
                     </>
                   ) : (

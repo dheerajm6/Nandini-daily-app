@@ -349,7 +349,8 @@ const fmtDate  = (iso: string) => iso
 /* ─── Screen ─────────────────────────────────────────────────────────── */
 export default function SubscriptionsScreen() {
   const { userMode } = useApp()
-  const planPrice = userMode === 'business' ? 399 : 149
+  const planPrice    = userMode === 'business' ? 399 : 149
+  const perDelivery  = (Math.floor(planPrice * 10 / 30) / 10).toFixed(1)
   const [addresses, setAddresses]     = useState<Address[]>(INIT_ADDRESSES)
   const [sheet, setSheet]             = useState<SheetType>(null)
   const [activeId, setActiveId]       = useState<string | null>(null)
@@ -1352,12 +1353,12 @@ export default function SubscriptionsScreen() {
                         <p className="text-[42px] font-black text-white tracking-tight leading-none">₹149</p>
                         <p className="text-[14px] text-white/80 mt-1">per month</p>
                         <div className="mt-3 inline-block px-3 py-1 rounded-full bg-white/20">
-                          <p className="text-[12px] text-white font-semibold">30 deliveries included · ₹3 each</p>
+                          <p className="text-[12px] text-white font-semibold">30 deliveries included · ₹{perDelivery} each</p>
                         </div>
                       </div>
                       <div className="space-y-2.5 mb-5">
                         {[
-                          { icon:'📦', t:'30 deliveries per month',  s:"That's just ₹3 per delivery" },
+                          { icon:'📦', t:'30 deliveries per month',  s:`That's just ₹${perDelivery} per delivery` },
                           { icon:'🔄', t:'Unused days carry forward', s:'Going on vacation? No waste'  },
                           { icon:'➕', t:'Add items for free',        s:'Same delivery, no extra charge'},
                           { icon:'⏸️', t:'Pause anytime',            s:'Per product or full plan'     },
