@@ -29,11 +29,13 @@
     -moz-appearance: textfield;
   }
 
+  * {
+    scrollbar-width: none;
+  }
+
   ::-webkit-scrollbar {
     display: none;
   }
-
-  scrollbar-width: none;
 }
 
 @layer components {
