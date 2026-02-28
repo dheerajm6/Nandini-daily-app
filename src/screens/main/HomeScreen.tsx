@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bell, ChevronRight, MapPin, Clock, Gift, ArrowRight, Share2, SlidersHorizontal, Home, Users, Heart, Plus, BarChart2, Timer, ShoppingBag } from 'lucide-react'
+import { Bell, ChevronRight, MapPin, Clock, Gift, ArrowRight, Share2, SlidersHorizontal, Home, Users, Heart, Plus, BarChart2, Timer, ShoppingBag, Wallet, Building2, Truck } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 
 // ── Greeting based on device time ────────────────────────────────────────────
@@ -24,10 +24,10 @@ function getAddOnTimeLeft() {
 }
 
 const ADD_ON_QUICK = [
-  { emoji: '🥛', name: 'Milk',    category: 'milk'    },
-  { emoji: '🍶', name: 'Curd',    category: 'curd'    },
-  { emoji: '🧈', name: 'Butter',  category: 'butter'  },
-  { emoji: '🥚', name: 'Paneer',  category: 'paneer'  },
+  { name: 'Milk',    category: 'milk',    file: 'milk.png',           bg: '#EBF5FF' },
+  { name: 'Curd',    category: 'curd',    file: 'curd.png',           bg: '#FFFBEB' },
+  { name: 'Butter',  category: 'butter',  file: 'butter.png',         bg: '#FFF3E0' },
+  { name: 'Paneer',  category: 'paneer',  file: 'Paneer&Cheese.png',  bg: '#FFF0E6' },
 ]
 
 // ── Week calendar helpers ─────────────────────────────────────────────────────
@@ -171,10 +171,66 @@ const ADDRESSES = [
   },
 ]
 
+// ── Business locations (used in business mode home) ──────────────────────────
+const BIZ_LOCATIONS = [
+  {
+    id: 'main',
+    label: 'Main Outlet',
+    area: 'Koramangala, Bengaluru',
+    Icon: Building2,
+    color: '#0055A5',
+    bg: '#E8F0FF',
+    items: 'Full Cream Milk × 10, Curd × 4, Ghee × 2',
+    qty: 16,
+  },
+  {
+    id: 'branch',
+    label: 'Branch — MG Road',
+    area: 'MG Road, Bengaluru',
+    Icon: Users,
+    color: '#34C759',
+    bg: '#E9FAF0',
+    items: 'Toned Milk × 6, Butter × 2',
+    qty: 8,
+  },
+  {
+    id: 'cloud',
+    label: 'Cloud Kitchen',
+    area: 'HSR Layout, Bengaluru',
+    Icon: ShoppingBag,
+    color: '#FF9500',
+    bg: '#FFF8E6',
+    items: 'Full Cream Milk × 4, Paneer × 1',
+    qty: 5,
+  },
+]
+
+// ── All categories master list ────────────────────────────────────────────────
+const ALL_CATS = [
+  { id: 'milk',          name: 'Milk',              file: 'milk.png',                bg: '#EBF5FF' },
+  { id: 'curd',          name: 'Curd',              file: 'curd.png',                bg: '#FFFBEB' },
+  { id: 'paneer',        name: 'Paneer & Cheese',   file: 'Paneer&Cheese.png',       bg: '#FFF0E6' },
+  { id: 'milk-powder',   name: 'Milk Powder',       file: 'Milk-powder.png',         bg: '#F5F5FF' },
+  { id: 'ice-creams',    name: 'Ice Creams',        file: 'Ice Creams.png',          bg: '#FFF0F7' },
+  { id: 'ghee',          name: 'Ghee',              file: 'ghee.png',                bg: '#FFF7E6' },
+  { id: 'butter',        name: 'Butter',            file: 'butter.png',              bg: '#FFF3E0' },
+  { id: 'flavoured-milk',name: 'Flavoured Milk',    file: 'Flavoured Milk.png',      bg: '#F3EEFF' },
+  { id: 'sweets',        name: 'Sweets',            file: 'sweets.png',              bg: '#FFE9EE' },
+  { id: 'chocolates',    name: 'Chocolates',        file: 'chocolates.png',          bg: '#FBF0E8' },
+  { id: 'bakery',        name: 'Bakery',            file: 'bakery.png',              bg: '#FEFBF0' },
+  { id: 'namkeen',       name: 'Namkeen',           file: 'Namkeen.png',             bg: '#F0FFF4' },
+  { id: 'rusk',          name: 'Rusk & Cookies',    file: 'Rusk&Cookies.png',        bg: '#FFFDE6' },
+  { id: 'instant-mix',   name: 'Instant Mix',       file: 'Instant mix.png',         bg: '#E8F7F7' },
+  { id: 'buttermilk',    name: 'Buttermilk & Lassi',file: 'butter milk & lassi.png', bg: '#F0FBF4' },
+  { id: 'soda',          name: 'Soda Drink',        file: 'Soda Drink.png',          bg: '#E6FBFF' },
+  { id: 'good-life',     name: 'Good Life',         file: 'nandini-goodlife.png',    bg: '#E8F7EE' },
+  { id: 'merchandise',   name: 'Merchandise',       file: 'Merchandise.png',         bg: '#F0F0FF' },
+]
+
 // ─────────────────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const navigate  = useNavigate()
-  const { phone } = useApp()
+  const { phone, userName, userMode, switchMode, enabledCategories, walletBalance } = useApp()
   const greeting  = getGreeting()
 
   const [city,       setCity]       = useState('Bengaluru')
@@ -231,9 +287,17 @@ export default function HomeScreen() {
                 style={{ color: 'rgba(255,255,255,0.65)' }}>
                 {greeting.emoji} {greeting.text}
               </p>
-              <h1 className="text-[22px] font-bold text-white tracking-[-0.5px]">
-                Nandini Daily
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-[22px] font-bold text-white tracking-[-0.5px]">
+                  {userName}
+                </h1>
+                {userMode === 'business' && (
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-[0.5px]"
+                    style={{ background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.85)' }}>
+                    Business
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button className="w-9 h-9 rounded-full flex items-center justify-center"
@@ -246,17 +310,135 @@ export default function HomeScreen() {
               </div>
             </div>
           </div>
-          <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl"
-            style={{ background: 'rgba(255,255,255,0.12)' }}>
-            <MapPin style={{ width: 14, height: 14 }} className="text-white" />
-            <span className="text-[13px] font-medium text-white">{city}</span>
-            <ChevronRight style={{ width: 12, height: 12 }} className="text-white opacity-60" />
-          </button>
+          <div className="flex items-center justify-between">
+            <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl"
+              style={{ background: 'rgba(255,255,255,0.12)' }}>
+              <MapPin style={{ width: 14, height: 14 }} className="text-white" />
+              <span className="text-[13px] font-medium text-white">{city}</span>
+              <ChevronRight style={{ width: 12, height: 12 }} className="text-white opacity-60" />
+            </button>
+
+            {/* Individual / Business toggle */}
+            <div className="flex p-[3px] rounded-full"
+              style={{ background: 'rgba(255,255,255,0.12)' }}>
+              {(['individual', 'business'] as const).map(mode => (
+                <motion.button
+                  key={mode}
+                  onClick={() => switchMode(mode)}
+                  className="relative px-4 py-1.5 rounded-full text-[12px] tracking-[-0.2px] transition-colors"
+                  style={{
+                    fontWeight: userMode === mode ? 600 : 400,
+                    color: userMode === mode ? '#0055A5' : 'rgba(255,255,255,0.55)',
+                  }}
+                >
+                  {userMode === mode && (
+                    <motion.div
+                      layoutId="modePill"
+                      className="absolute inset-0 rounded-full bg-white"
+                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    />
+                  )}
+                  <span className="relative z-10">
+                    {mode === 'individual' ? 'Personal' : 'Business'}
+                  </span>
+                </motion.button>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="h-6 rounded-t-[24px]" style={{ background: '#F2F2F7' }} />
       </div>
 
       <div className="px-4 -mt-2 pb-10">
+
+        {/* ── Business: Supply Summary ────────────────────────── */}
+        {userMode === 'business' && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.06 }} className="mb-4">
+            <div className="rounded-2xl overflow-hidden"
+              style={{ background: 'linear-gradient(145deg, #001B3A 0%, #003B73 100%)', boxShadow: '0 6px 24px rgba(0,40,100,0.28)' }}>
+
+              {/* Header */}
+              <div className="px-4 pt-4 pb-3 flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.7px]"
+                    style={{ color: 'rgba(255,255,255,0.45)' }}>Today's Supply</p>
+                  <p className="text-[22px] font-bold text-white leading-tight mt-0.5">
+                    {BIZ_LOCATIONS.reduce((s, l) => s + l.qty, 0)} items · {BIZ_LOCATIONS.length} outlets
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                  style={{ background: 'rgba(255,255,255,0.1)' }}>
+                  <Wallet style={{ width: 13, height: 13, color: 'rgba(255,255,255,0.65)' }} />
+                  <span className="text-[14px] font-bold text-white">₹{walletBalance.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              {/* Location rows */}
+              <div className="px-4 pb-3 space-y-2">
+                {BIZ_LOCATIONS.map((loc) => {
+                  const Icon = loc.Icon
+                  return (
+                    <div key={loc.id} className="flex items-center gap-3 py-2.5 px-3 rounded-xl"
+                      style={{ background: 'rgba(255,255,255,0.07)' }}>
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ background: loc.bg }}>
+                        <Icon style={{ width: 14, height: 14, color: loc.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-bold text-white leading-none">{loc.label}</p>
+                        <p className="text-[10px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>{loc.items}</p>
+                      </div>
+                      <span className="text-[11px] font-bold flex-shrink-0 px-2 py-1 rounded-lg"
+                        style={{ color: loc.color, background: `${loc.bg}22` }}>
+                        {loc.qty} items
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Footer */}
+              <div className="px-4 py-2.5 flex items-center gap-2"
+                style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <Truck style={{ width: 12, height: 12, color: 'rgba(255,255,255,0.4)' }} />
+                <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  All outlets · 5:00 – 7:00 AM
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Business: Quick Reorder ──────────────────────────── */}
+        {userMode === 'business' && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }} className="mb-4">
+            <p className="text-[15px] font-bold text-[#1C1C1E] mb-3">Quick Reorder</p>
+            <div className="flex gap-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+              {ALL_CATS.filter(c => ['milk', 'curd', 'ghee', 'butter', 'paneer'].includes(c.id)).map((cat, i) => (
+                <motion.button
+                  key={cat.id}
+                  initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 + i * 0.04 }}
+                  onClick={() => navigate(`/app/products/${cat.id}`)}
+                  className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-white flex-shrink-0 active:opacity-75 transition-opacity"
+                  style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.07)', border: '1px solid #F0F0F0' }}
+                >
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+                    style={{ background: cat.bg }}>
+                    <img src={`/category%20images/${cat.file.replace(/ /g, '%20')}`} alt={cat.name}
+                      className="w-[78%] h-[78%] object-contain" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[12px] font-bold text-[#1C1C1E] leading-none">{cat.name}</p>
+                    <p className="text-[10px] mt-0.5 font-semibold" style={{ color: '#34C759' }}>Available</p>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* ── Add to Tomorrow's Delivery (3 PM – 6 PM only) ──── */}
         <AnimatePresence>
@@ -268,98 +450,126 @@ export default function HomeScreen() {
               transition={{ type: 'spring', stiffness: 340, damping: 28 }}
               className="mb-4"
             >
-              <div className="rounded-2xl overflow-hidden"
-                style={{ boxShadow: '0 4px 20px rgba(194,113,0,0.22)' }}>
-
-                {/* Top band */}
-                <div className="flex items-center justify-between px-4 py-2.5"
-                  style={{ background: 'linear-gradient(90deg, #B45309 0%, #D97706 100%)' }}>
-                  <div className="flex items-center gap-1.5">
-                    {/* Pulsing dot */}
-                    <motion.div
-                      className="w-2 h-2 rounded-full bg-white"
-                      animate={{ opacity: [1, 0.3, 1] }}
-                      transition={{ duration: 1.4, repeat: Infinity }}
-                    />
-                    <span className="text-[11px] font-bold text-white uppercase tracking-[0.6px]">
-                      Order window open
-                    </span>
+              {userMode === 'business' ? (
+                /* ── Business: compact alert banner ── */
+                <button
+                  onClick={() => navigate('/app/categories')}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl active:opacity-80 transition-opacity"
+                  style={{
+                    background: 'linear-gradient(90deg, #92400E 0%, #B45309 100%)',
+                    boxShadow: '0 4px 16px rgba(180,83,9,0.28)',
+                  }}
+                >
+                  {/* Pulsing dot */}
+                  <motion.div
+                    className="w-2 h-2 rounded-full bg-white flex-shrink-0"
+                    animate={{ opacity: [1, 0.3, 1] }}
+                    transition={{ duration: 1.4, repeat: Infinity }}
+                  />
+                  <div className="flex-1 text-left">
+                    <p className="text-[13px] font-bold text-white leading-none">
+                      Supply amendment window open
+                    </p>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                      Closes in {addOnTime.h > 0 ? `${addOnTime.h}h ` : ''}{addOnTime.m}m · tap to adjust quantities
+                    </p>
                   </div>
-                  {/* Countdown */}
-                  <div className="flex items-center gap-1.5">
-                    <Timer style={{ width: 13, height: 13, color: 'rgba(255,255,255,0.85)' }} />
-                    <span className="text-[13px] font-bold text-white">
-                      {addOnTime.h > 0 ? `${addOnTime.h}h ` : ''}{addOnTime.m}m left
-                    </span>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <span className="text-[12px] font-bold text-white">Adjust</span>
+                    <ArrowRight style={{ width: 13, height: 13, color: 'white' }} />
                   </div>
-                </div>
+                </button>
+              ) : (
+                /* ── Individual: full card ── */
+                <div className="rounded-2xl overflow-hidden"
+                  style={{ boxShadow: '0 4px 20px rgba(194,113,0,0.22)' }}>
 
-                {/* Main card body */}
-                <div className="bg-white px-4 pt-3.5 pb-4">
-                  {/* Heading */}
-                  <div className="flex items-start justify-between mb-1">
-                    <div>
-                      <p className="text-[16px] font-bold text-[#1C1C1E] leading-tight">
-                        Add to Tomorrow's Delivery
-                      </p>
-                      <p className="text-[12px] text-ios-gray-1 mt-0.5 leading-snug">
-                        Guests coming? Add anything once — delivered with your <br />
-                        <span className="font-semibold text-[#1C1C1E]">5–7 AM subscription tomorrow</span>
-                      </p>
+                  {/* Top band */}
+                  <div className="flex items-center justify-between px-4 py-2.5"
+                    style={{ background: 'linear-gradient(90deg, #B45309 0%, #D97706 100%)' }}>
+                    <div className="flex items-center gap-1.5">
+                      <motion.div
+                        className="w-2 h-2 rounded-full bg-white"
+                        animate={{ opacity: [1, 0.3, 1] }}
+                        transition={{ duration: 1.4, repeat: Infinity }}
+                      />
+                      <span className="text-[11px] font-bold text-white uppercase tracking-[0.6px]">
+                        Order window open
+                      </span>
                     </div>
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ml-2"
-                      style={{ background: '#FFF7E6' }}>
-                      <ShoppingBag style={{ width: 18, height: 18, color: '#D97706' }} />
+                    <div className="flex items-center gap-1.5">
+                      <Timer style={{ width: 13, height: 13, color: 'rgba(255,255,255,0.85)' }} />
+                      <span className="text-[13px] font-bold text-white">
+                        {addOnTime.h > 0 ? `${addOnTime.h}h ` : ''}{addOnTime.m}m left
+                      </span>
                     </div>
                   </div>
 
-                  {/* Divider */}
-                  <div className="my-3" style={{ height: 1, background: '#F0F0F0' }} />
+                  {/* Main card body */}
+                  <div className="bg-white px-4 pt-3.5 pb-4">
+                    <div className="flex items-start justify-between mb-1">
+                      <div>
+                        <p className="text-[16px] font-bold text-[#1C1C1E] leading-tight">
+                          Add to Tomorrow's Delivery
+                        </p>
+                        <p className="text-[12px] text-ios-gray-1 mt-0.5 leading-snug">
+                          Guests coming? Add anything once — delivered with your <br />
+                          <span className="font-semibold text-[#1C1C1E]">5–7 AM subscription tomorrow</span>
+                        </p>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ml-2"
+                        style={{ background: '#FFF7E6' }}>
+                        <ShoppingBag style={{ width: 18, height: 18, color: '#D97706' }} />
+                      </div>
+                    </div>
 
-                  {/* Quick-add chips + Browse */}
-                  <div className="flex items-center gap-2">
-                    {ADD_ON_QUICK.map(item => (
+                    <div className="my-3" style={{ height: 1, background: '#F0F0F0' }} />
+
+                    <div className="flex items-center gap-2">
+                      {ADD_ON_QUICK.map(item => (
+                        <button
+                          key={item.category}
+                          onClick={() => navigate(`/app/products/${item.category}`)}
+                          className="flex flex-col items-center gap-1 active:scale-95 transition-transform"
+                        >
+                          <div className="w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden"
+                            style={{ background: item.bg, border: '1.5px solid rgba(0,0,0,0.06)' }}>
+                            <img
+                              src={`/category%20images/${item.file.replace(/ /g, '%20')}`}
+                              alt={item.name}
+                              className="w-[78%] h-[78%] object-contain"
+                            />
+                          </div>
+                          <span className="text-[10px] font-semibold text-[#1C1C1E]">{item.name}</span>
+                        </button>
+                      ))}
                       <button
-                        key={item.category}
-                        onClick={() => navigate(`/app/products/${item.category}`)}
-                        className="flex flex-col items-center gap-1 active:scale-95 transition-transform"
+                        onClick={() => navigate('/app/categories')}
+                        className="ml-auto flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl active:opacity-75"
+                        style={{ background: '#D97706' }}
                       >
-                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                          style={{ background: '#FFF7E6', border: '1.5px solid #FDE68A' }}>
-                          <span className="text-[22px]">{item.emoji}</span>
-                        </div>
-                        <span className="text-[10px] font-semibold text-[#1C1C1E]">{item.name}</span>
+                        <Plus style={{ width: 14, height: 14, color: 'white' }} />
+                        <span className="text-[12px] font-bold text-white">Browse</span>
                       </button>
-                    ))}
+                    </div>
+                  </div>
 
-                    {/* Browse all */}
-                    <button
-                      onClick={() => navigate('/app/categories')}
-                      className="ml-auto flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl active:opacity-75"
-                      style={{ background: '#D97706' }}
-                    >
-                      <Plus style={{ width: 14, height: 14, color: 'white' }} />
-                      <span className="text-[12px] font-bold text-white">Browse</span>
-                    </button>
+                  {/* Tomorrow's date strip */}
+                  <div className="px-4 py-2.5 flex items-center gap-2"
+                    style={{ background: '#FFFBF0', borderTop: '1px solid #FDE68A' }}>
+                    <Clock style={{ width: 12, height: 12, color: '#D97706' }} />
+                    <p className="text-[11px] font-medium" style={{ color: '#92400E' }}>
+                      Delivery on{' '}
+                      <span className="font-bold">
+                        {new Date(Date.now() + 86_400_000).toLocaleDateString('en-IN', {
+                          weekday: 'long', day: 'numeric', month: 'short'
+                        })}
+                      </span>
+                      {' '}· 5:00 – 7:00 AM
+                    </p>
                   </div>
                 </div>
-
-                {/* Tomorrow's date strip */}
-                <div className="px-4 py-2.5 flex items-center gap-2"
-                  style={{ background: '#FFFBF0', borderTop: '1px solid #FDE68A' }}>
-                  <Clock style={{ width: 12, height: 12, color: '#D97706' }} />
-                  <p className="text-[11px] font-medium" style={{ color: '#92400E' }}>
-                    Delivery on{' '}
-                    <span className="font-bold">
-                      {new Date(Date.now() + 86_400_000).toLocaleDateString('en-IN', {
-                        weekday: 'long', day: 'numeric', month: 'short'
-                      })}
-                    </span>
-                    {' '}· 5:00 – 7:00 AM
-                  </p>
-                </div>
-
-              </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -498,19 +708,31 @@ export default function HomeScreen() {
           </AnimatePresence>
 
           {/* Legend */}
-          <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-2.5"
-            style={{ borderTop: '1px solid #F0F0F0' }}>
-            {(Object.entries(STATUS) as [DayStatus, typeof STATUS[DayStatus]][]).map(([key, val]) => (
-              <div key={key} className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full" style={{ background: val.color }} />
-                <span className="text-[11px] text-ios-gray-1 font-medium">{val.label}</span>
+          {(() => {
+            const BIZ_LABELS: Record<DayStatus, string> = {
+              'delivered': 'Fulfilled',
+              'upcoming':  'Scheduled',
+              'vacation':  'Closed',
+              'on-hold':   'Paused',
+            }
+            return (
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-2.5"
+                style={{ borderTop: '1px solid #F0F0F0' }}>
+                {(Object.entries(STATUS) as [DayStatus, typeof STATUS[DayStatus]][]).map(([key, val]) => (
+                  <div key={key} className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full" style={{ background: val.color }} />
+                    <span className="text-[11px] text-ios-gray-1 font-medium">
+                      {userMode === 'business' ? BIZ_LABELS[key] : val.label}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )
+          })()}
         </motion.div>
 
-        {/* ── Delivery Schedule ──────────────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        {/* ── Delivery Schedule (individual only) ────────────── */}
+        {userMode !== 'business' && <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.13 }} className="mb-4">
 
           <div className="flex items-center justify-between mb-3">
@@ -576,10 +798,10 @@ export default function HomeScreen() {
               )
             })}
           </div>
-        </motion.div>
+        </motion.div>}
 
-        {/* ── Discover Carousel ──────────────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        {/* ── Discover Carousel (individual only) ────────────── */}
+        {userMode !== 'business' && <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.18 }} className="mb-4">
 
           <p className="text-[15px] font-bold text-[#1C1C1E] mb-3">Discover</p>
@@ -639,40 +861,98 @@ export default function HomeScreen() {
                 }} />
             ))}
           </div>
-        </motion.div>
+        </motion.div>}
 
         {/* ── Shop by Category ───────────────────────────────── */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.23 }} className="mb-4">
 
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[15px] font-bold text-[#1C1C1E]">Shop by Category</p>
-            <button onClick={() => navigate('/app/categories')}
-              className="text-[13px] font-semibold text-brand-blue active:opacity-60">
-              See all
-            </button>
+            <p className="text-[15px] font-bold text-[#1C1C1E]">
+              {userMode === 'business' ? 'Supply Categories' : 'Shop by Category'}
+            </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { name: 'Milk', file: 'milk.png', bg: '#EBF5FF', id: 'milk' },
-              { name: 'Curd', file: 'curd.png', bg: '#EBF5FF', id: 'curd' },
-              { name: 'Ghee', file: 'ghee.png', bg: '#EBF5FF', id: 'ghee' },
-            ].map((cat, i) => (
-              <motion.button key={cat.name}
-                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.26 + i * 0.06, ease: [0.34, 1.3, 0.64, 1] }}
-                onClick={() => navigate(`/app/products/${cat.id}`)}
-                className="flex flex-col items-center gap-2 active:opacity-70 transition-opacity">
-                <div className="w-full aspect-square rounded-2xl flex items-center justify-center overflow-hidden"
-                  style={{ background: cat.bg }}>
-                  <img src={`/category%20images/${cat.file}`} alt={cat.name}
-                    className="w-[75%] h-[75%] object-contain" />
-                </div>
-                <p className="text-[12px] font-semibold text-[#1C1C1E] text-center">{cat.name}</p>
-              </motion.button>
-            ))}
-          </div>
+          <AnimatePresence mode="wait">
+            {userMode === 'individual' ? (
+              /* ── Individual: 3 circles + View all ── */
+              <motion.div
+                key="individual-cats"
+                initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.22 }}
+                className="flex items-start gap-4"
+              >
+                {ALL_CATS.filter(c => ['milk', 'curd', 'ghee'].includes(c.id)).map((cat, i) => (
+                  <motion.button key={cat.id}
+                    initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.05, ease: [0.34, 1.3, 0.64, 1] }}
+                    onClick={() => navigate(`/app/products/${cat.id}`)}
+                    className="flex flex-col items-center gap-2 flex-shrink-0 active:opacity-70 transition-opacity"
+                  >
+                    <div className="w-[88px] h-[88px] rounded-full flex items-center justify-center overflow-hidden"
+                      style={{ background: cat.bg, boxShadow: '0 2px 10px rgba(0,0,0,0.07)' }}>
+                      <img src={`/category%20images/${cat.file.replace(/ /g, '%20')}`} alt={cat.name}
+                        className="w-[72%] h-[72%] object-contain" />
+                    </div>
+                    <p className="text-[11px] font-semibold text-[#1C1C1E] text-center leading-tight"
+                      style={{ width: 88 }}>
+                      {cat.name}
+                    </p>
+                  </motion.button>
+                ))}
+
+                {/* View all button */}
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.18, ease: [0.34, 1.3, 0.64, 1] }}
+                  onClick={() => navigate('/app/categories')}
+                  className="flex flex-col items-center gap-2 flex-shrink-0 active:opacity-70 transition-opacity"
+                >
+                  <div className="w-[88px] h-[88px] rounded-full flex items-center justify-center"
+                    style={{ background: '#F2F2F7', boxShadow: '0 2px 10px rgba(0,0,0,0.07)' }}>
+                    <ChevronRight className="w-6 h-6" style={{ color: '#0055A5' }} />
+                  </div>
+                  <p className="text-[11px] font-semibold text-brand-blue text-center leading-tight"
+                    style={{ width: 88 }}>
+                    View all
+                  </p>
+                </motion.button>
+              </motion.div>
+            ) : (
+              /* ── Business: 2-col supply cards ── */
+              <motion.div
+                key="business-cats"
+                initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.22 }}
+                className="grid grid-cols-2 gap-2.5"
+              >
+                {ALL_CATS.filter(c => enabledCategories.includes(c.id)).map((cat, i) => (
+                  <motion.button key={cat.id}
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                    onClick={() => navigate(`/app/products/${cat.id}`)}
+                    className="flex flex-col rounded-2xl bg-white text-left active:opacity-80 transition-opacity overflow-hidden"
+                    style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0' }}
+                  >
+                    {/* Image area */}
+                    <div className="w-full flex items-center justify-center py-5"
+                      style={{ background: cat.bg }}>
+                      <img src={`/category%20images/${cat.file.replace(/ /g, '%20')}`} alt={cat.name}
+                        className="w-[72px] h-[72px] object-contain" />
+                    </div>
+                    {/* Label area */}
+                    <div className="px-3 py-2.5">
+                      <p className="text-[13px] font-bold text-[#1C1C1E] leading-tight">{cat.name}</p>
+                      <div className="flex items-center gap-1 mt-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#34C759]" />
+                        <p className="text-[10px] font-medium" style={{ color: '#8E8E93' }}>Bulk supply</p>
+                      </div>
+                    </div>
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {/* ── Insights Glance Card ───────────────────────────── */}
@@ -682,60 +962,129 @@ export default function HomeScreen() {
             onClick={() => navigate('/app/insights')}
             className="w-full text-left active:scale-[0.98] transition-transform"
           >
-            <div className="ios-card overflow-hidden p-0">
-              {/* Gradient accent top */}
-              <div style={{ height: 3, background: 'linear-gradient(90deg, #0055A5 0%, #34C759 100%)' }} />
+            {userMode === 'business' ? (
+              /* ── Business: Supply Analytics ── */
+              <div className="overflow-hidden rounded-2xl"
+                style={{ background: 'linear-gradient(150deg, #0A1628 0%, #0D2F55 100%)', boxShadow: '0 4px 20px rgba(0,20,60,0.35)' }}>
 
-              <div className="px-4 pt-3 pb-4">
-                {/* Header row */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-                      style={{ background: '#EBF4FF' }}>
-                      <BarChart2 style={{ width: 15, height: 15, color: '#0055A5' }} />
-                    </div>
-                    <div>
-                      <p className="text-[14px] font-bold text-[#1C1C1E] leading-none">Monthly Insights</p>
-                      <p className="text-[10px] text-ios-gray-1 mt-0.5">
-                        {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
-                      </p>
-                    </div>
+                {/* Header */}
+                <div className="px-4 pt-4 pb-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-[14px] font-bold text-white leading-none">Supply Analytics</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                      {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
+                    </p>
                   </div>
                   <div className="flex items-center gap-0.5">
-                    <span className="text-[12px] font-semibold text-brand-blue">View all</span>
-                    <ChevronRight style={{ width: 14, height: 14, color: '#0055A5' }} />
+                    <span className="text-[12px] font-semibold" style={{ color: 'rgba(255,255,255,0.7)' }}>View all</span>
+                    <ChevronRight style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.7)' }} />
                   </div>
                 </div>
 
-                {/* 3 stat boxes */}
-                <div className="grid grid-cols-3 gap-2 mb-3">
+                {/* 4 metric tiles */}
+                <div className="px-4 pb-4 grid grid-cols-2 gap-2.5">
                   {[
-                    { val: '₹1,240', label: 'Spent',       color: '#007AFF', bg: '#EBF4FF' },
-                    { val: '18',      label: 'Deliveries',  color: '#34C759', bg: '#E9FAF0' },
-                    { val: '₹220',   label: 'Saved',        color: '#FF9500', bg: '#FFF4E5' },
-                  ].map((s, i) => (
-                    <div key={i} className="rounded-2xl py-2.5 px-2 text-center"
-                      style={{ background: s.bg }}>
-                      <p className="text-[15px] font-bold leading-none" style={{ color: s.color }}>{s.val}</p>
-                      <p className="text-[10px] font-medium mt-1" style={{ color: s.color + 'BB' }}>{s.label}</p>
+                    { label: 'Monthly Spend',     val: '₹12,450', sub: '+8% vs last month',  color: '#5AC8FA',  icon: '💰' },
+                    { label: 'Items Delivered',   val: '232',      sub: 'this month',          color: '#34C759',  icon: '📦' },
+                    { label: 'Fulfillment Rate',  val: '98%',      sub: 'on-time supply',      color: '#30D158',  icon: '✅' },
+                    { label: 'Active Outlets',    val: '3',        sub: 'all running',         color: '#FF9F0A',  icon: '🏪' },
+                  ].map((m, i) => (
+                    <div key={i} className="px-3 py-3 rounded-xl"
+                      style={{ background: 'rgba(255,255,255,0.07)' }}>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <span style={{ fontSize: 13 }}>{m.icon}</span>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.4px]"
+                          style={{ color: 'rgba(255,255,255,0.45)' }}>{m.label}</p>
+                      </div>
+                      <p className="text-[20px] font-bold text-white leading-none">{m.val}</p>
+                      <p className="text-[10px] mt-1" style={{ color: m.color }}>{m.sub}</p>
                     </div>
                   ))}
                 </div>
 
-                {/* Delivery success rate */}
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1.5 rounded-full overflow-hidden bg-[#F0F0F0]">
-                    <div className="h-full rounded-full" style={{ width: '97%', background: '#34C759' }} />
-                  </div>
-                  <span className="text-[11px] font-semibold" style={{ color: '#34C759' }}>97% on-time</span>
+                {/* Nudge strip */}
+                <div className="mx-4 mb-4 px-3 py-2 rounded-xl flex items-center gap-2"
+                  style={{ background: 'rgba(255,255,255,0.07)' }}>
+                  <span style={{ fontSize: 13 }}>💡</span>
+                  <p className="text-[11px] font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                    Bulk order Ghee this week to save ₹240 →
+                  </p>
                 </div>
               </div>
-            </div>
+            ) : (
+              /* ── Individual: Nandini Journey ── */
+              <div className="overflow-hidden rounded-2xl"
+                style={{ background: 'linear-gradient(150deg, #002F5F 0%, #0055A5 100%)', boxShadow: '0 4px 20px rgba(0,55,165,0.25)' }}>
+
+                {/* Header row */}
+                <div className="px-4 pt-4 pb-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-[14px] font-bold text-white leading-none">Your Nandini Journey</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                      {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-0.5">
+                    <span className="text-[12px] font-semibold" style={{ color: 'rgba(255,255,255,0.7)' }}>View all</span>
+                    <ChevronRight style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.7)' }} />
+                  </div>
+                </div>
+
+                {/* Score + stats */}
+                <div className="px-4 pb-4 flex items-center gap-4">
+                  <div className="relative flex-shrink-0" style={{ width: 72, height: 72 }}>
+                    <svg width="72" height="72" viewBox="0 0 72 72" className="absolute inset-0">
+                      <circle cx="36" cy="36" r="28" fill="none"
+                        stroke="rgba(255,255,255,0.12)" strokeWidth="7" />
+                      <circle cx="36" cy="36" r="28" fill="none"
+                        stroke="url(#homeRingGrad)" strokeWidth="7"
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 28 * 0.73} ${2 * Math.PI * 28 * 0.27}`}
+                        transform="rotate(-90 36 36)"
+                      />
+                      <defs>
+                        <linearGradient id="homeRingGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#5AC8FA" />
+                          <stop offset="100%" stopColor="#ffffff" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <p className="text-[20px] font-bold text-white leading-none">73</p>
+                      <p className="text-[8px] font-semibold mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>score</p>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 space-y-2">
+                    {[
+                      { emoji: '🔥', val: '22-day',  label: 'morning streak',     color: '#FF9500' },
+                      { emoji: '⭐', val: '4 of 8',  label: 'products in home',   color: '#5AC8FA' },
+                      { emoji: '✅', val: '97%',      label: 'deliveries on time', color: '#34C759' },
+                    ].map((s, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span style={{ fontSize: 12 }}>{s.emoji}</span>
+                        <p className="text-[13px] font-bold text-white leading-none">{s.val}</p>
+                        <p className="text-[11px] leading-none" style={{ color: 'rgba(255,255,255,0.45)' }}>{s.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Nudge strip */}
+                <div className="mx-4 mb-4 px-3 py-2 rounded-xl flex items-center gap-2"
+                  style={{ background: 'rgba(255,255,255,0.08)' }}>
+                  <span style={{ fontSize: 13 }}>🧀</span>
+                  <p className="text-[11px] font-medium" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                    Add Paneer to reach score 80 →
+                  </p>
+                </div>
+              </div>
+            )}
           </button>
         </motion.div>
 
-        {/* ── Discover KMF ───────────────────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        {/* ── Discover KMF (individual only) ─────────────────── */}
+        {userMode !== 'business' && <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.28 }} className="ios-card mb-4 overflow-hidden p-0">
 
           <div className="px-5 pt-5 pb-4"
@@ -767,10 +1116,10 @@ export default function HomeScreen() {
               </div>
             ))}
           </div>
-        </motion.div>
+        </motion.div>}
 
-        {/* ── Why Choose Nandini — static image card ─────────── */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        {/* ── Why Choose Nandini (individual only) ───────────── */}
+        {userMode !== 'business' && <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.32 }} className="mb-4">
           <div style={{
             borderRadius: 20,
@@ -789,7 +1138,7 @@ export default function HomeScreen() {
               }}
             />
           </div>
-        </motion.div>
+        </motion.div>}
 
         {/* ── Refer & Earn ───────────────────────────────────── */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}

@@ -21,6 +21,8 @@ interface Product {
 interface AppState {
   phone: string
   setPhone: (v: string) => void
+  userName: string
+  setUserName: (v: string) => void
   city: string
   setCity: (v: string) => void
   address: Address | null
@@ -33,17 +35,40 @@ interface AppState {
   updateCart: (product: Product) => void
   totalItems: number
   totalPrice: number
+  walletBalance: number
+  setWalletBalance: (v: number) => void
+  userMode: 'individual' | 'business'
+  setUserMode: (v: 'individual' | 'business') => void
+  switchMode: (v: 'individual' | 'business') => void
+  enabledCategories: string[]
+  setEnabledCategories: (v: string[]) => void
 }
 
 const AppContext = createContext<AppState | undefined>(undefined)
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [phone, setPhone] = useState('')
+  const [userName, setUserName] = useState('Akash')
   const [city, setCity] = useState('')
   const [address, setAddress] = useState<Address | null>(null)
   const [deliveryTime, setDeliveryTime] = useState('5:00 AM – 7:00 AM')
   const [deliveryDays, setDeliveryDays] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
   const [cart, setCart] = useState<Product[]>([])
+  const [walletBalance, setWalletBalance] = useState(2350)
+  const [userMode, setUserMode] = useState<'individual' | 'business'>('individual')
+  const [enabledCategories, setEnabledCategories] = useState<string[]>([
+    'milk', 'curd', 'paneer', 'milk-powder', 'ice-creams',
+  ])
+
+  const DEFAULTS = {
+    individual: ['milk', 'curd', 'paneer', 'milk-powder', 'ice-creams'],
+    business:   ['milk', 'curd', 'ghee', 'butter', 'paneer', 'milk-powder', 'ice-creams'],
+  }
+
+  const switchMode = (mode: 'individual' | 'business') => {
+    setUserMode(mode)
+    setEnabledCategories(DEFAULTS[mode])
+  }
 
   const updateCart = (product: Product) => {
     setCart(prev => {
@@ -64,12 +89,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider value={{
       phone, setPhone,
+      userName, setUserName,
       city, setCity,
       address, setAddress,
       deliveryTime, setDeliveryTime,
       deliveryDays, setDeliveryDays,
       cart, updateCart,
       totalItems, totalPrice,
+      walletBalance, setWalletBalance,
+      userMode, setUserMode, switchMode,
+      enabledCategories, setEnabledCategories,
     }}>
       {children}
     </AppContext.Provider>

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
+import { useApp } from '../../context/AppContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
 import L from 'leaflet'
@@ -7,7 +8,7 @@ import {
   Plus, MapPin, Check, X, ArrowLeft, Minus,
   Pause, Play, Trash2, ShoppingBag, Zap, RefreshCw,
   Navigation, MoreHorizontal, Palmtree, PauseCircle,
-  XCircle, RotateCcw, CalendarRange,
+  XCircle, RotateCcw, CalendarRange, CalendarOff, WrenchIcon, PackageX,
 } from 'lucide-react'
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
@@ -347,6 +348,8 @@ const fmtDate  = (iso: string) => iso
 
 /* ─── Screen ─────────────────────────────────────────────────────────── */
 export default function SubscriptionsScreen() {
+  const { userMode } = useApp()
+  const planPrice = userMode === 'business' ? 299 : 99
   const [addresses, setAddresses]     = useState<Address[]>(INIT_ADDRESSES)
   const [sheet, setSheet]             = useState<SheetType>(null)
   const [activeId, setActiveId]       = useState<string | null>(null)
@@ -820,9 +823,9 @@ export default function SubscriptionsScreen() {
                         <div>
                           <p className="text-[10px] text-[#AEAEB2] uppercase tracking-wide">Est. monthly</p>
                           <p className="text-[15px] font-bold text-[#1C1C1E]">
-                            ₹{(99 + est).toLocaleString('en-IN')}<span className="text-[11px] font-normal text-[#8E8E93]"> /mo</span>
+                            ₹{(planPrice + est).toLocaleString('en-IN')}<span className="text-[11px] font-normal text-[#8E8E93]"> /mo</span>
                           </p>
-                          {est > 0 && <p className="text-[10px] text-[#AEAEB2]">₹99 plan + ₹{est.toLocaleString('en-IN')} products</p>}
+                          {est > 0 && <p className="text-[10px] text-[#AEAEB2]">₹{planPrice} plan + ₹{est.toLocaleString('en-IN')} products</p>}
                         </div>
                         <button
                           onClick={() => { setActiveId(addr.id); setAddStep('cat'); setSheet('addProduct') }}
@@ -935,53 +938,103 @@ export default function SubscriptionsScreen() {
                             </div>
 
                             <div className="space-y-2.5">
-                              {/* Vacation Mode */}
-                              <button
-                                onClick={() => setManageStep('vacation')}
-                                className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left active:scale-[0.98] transition-transform"
-                                style={{ background: '#E0F7FA' }}
-                              >
-                                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#BAE6FD' }}>
-                                  <Palmtree className="w-5 h-5" style={{ color: '#0369A1' }} />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="text-[15px] font-bold text-[#0C4A6E]">Vacation Mode</p>
-                                  <p className="text-[12px] mt-0.5" style={{ color: '#0891B2' }}>Pause for a date range · paused days carry forward</p>
-                                </div>
-                                <CalendarRange className="w-4 h-4 text-[#0891B2] flex-shrink-0" />
-                              </button>
+                              {userMode === 'business' ? (<>
+                                {/* Schedule Closure */}
+                                <button
+                                  onClick={() => setManageStep('vacation')}
+                                  className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left active:scale-[0.98] transition-transform"
+                                  style={{ background: '#E0F7FA' }}
+                                >
+                                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#BAE6FD' }}>
+                                    <CalendarOff className="w-5 h-5" style={{ color: '#0369A1' }} />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-[15px] font-bold text-[#0C4A6E]">Schedule Closure</p>
+                                    <p className="text-[12px] mt-0.5" style={{ color: '#0891B2' }}>Outlet closed for holiday or renovation? Set the dates.</p>
+                                  </div>
+                                  <CalendarRange className="w-4 h-4 text-[#0891B2] flex-shrink-0" />
+                                </button>
 
-                              {/* Hold Plan */}
-                              <button
-                                onClick={() => setManageStep('hold')}
-                                className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left active:scale-[0.98] transition-transform"
-                                style={{ background: '#FFFBEB' }}
-                              >
-                                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#FDE68A' }}>
-                                  <PauseCircle className="w-5 h-5" style={{ color: '#92400E' }} />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="text-[15px] font-bold text-[#78350F]">Hold Plan</p>
-                                  <p className="text-[12px] mt-0.5 text-[#B45309]">Pause indefinitely · plan days freeze · resume anytime</p>
-                                </div>
-                                <Pause className="w-4 h-4 text-[#B45309] flex-shrink-0" />
-                              </button>
+                                {/* Pause Supply */}
+                                <button
+                                  onClick={() => setManageStep('hold')}
+                                  className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left active:scale-[0.98] transition-transform"
+                                  style={{ background: '#FFFBEB' }}
+                                >
+                                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#FDE68A' }}>
+                                    <WrenchIcon className="w-5 h-5" style={{ color: '#92400E' }} />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-[15px] font-bold text-[#78350F]">Pause Supply</p>
+                                    <p className="text-[12px] mt-0.5 text-[#B45309]">Outlet under maintenance · resume when ready</p>
+                                  </div>
+                                  <Pause className="w-4 h-4 text-[#B45309] flex-shrink-0" />
+                                </button>
 
-                              {/* End Subscription */}
-                              <button
-                                onClick={() => setManageStep('end')}
-                                className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left active:scale-[0.98] transition-transform"
-                                style={{ background: '#FFF5F5' }}
-                              >
-                                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#FEE2E2' }}>
-                                  <XCircle className="w-5 h-5 text-[#DC2626]" />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="text-[15px] font-bold text-[#991B1B]">End Subscription</p>
-                                  <p className="text-[12px] mt-0.5 text-[#EF4444]">Cancel · unused days credited to wallet (₹3/day)</p>
-                                </div>
-                                <Trash2 className="w-4 h-4 text-[#EF4444] flex-shrink-0" />
-                              </button>
+                                {/* Discontinue Supply */}
+                                <button
+                                  onClick={() => setManageStep('end')}
+                                  className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left active:scale-[0.98] transition-transform"
+                                  style={{ background: '#FFF5F5' }}
+                                >
+                                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#FEE2E2' }}>
+                                    <PackageX className="w-5 h-5 text-[#DC2626]" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-[15px] font-bold text-[#991B1B]">Discontinue Supply</p>
+                                    <p className="text-[12px] mt-0.5 text-[#EF4444]">Stop supply to this outlet · unused balance refunded</p>
+                                  </div>
+                                  <Trash2 className="w-4 h-4 text-[#EF4444] flex-shrink-0" />
+                                </button>
+                              </>) : (<>
+                                {/* Vacation Mode */}
+                                <button
+                                  onClick={() => setManageStep('vacation')}
+                                  className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left active:scale-[0.98] transition-transform"
+                                  style={{ background: '#E0F7FA' }}
+                                >
+                                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#BAE6FD' }}>
+                                    <Palmtree className="w-5 h-5" style={{ color: '#0369A1' }} />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-[15px] font-bold text-[#0C4A6E]">Vacation Mode</p>
+                                    <p className="text-[12px] mt-0.5" style={{ color: '#0891B2' }}>Pause for a date range · paused days carry forward</p>
+                                  </div>
+                                  <CalendarRange className="w-4 h-4 text-[#0891B2] flex-shrink-0" />
+                                </button>
+
+                                {/* Hold Plan */}
+                                <button
+                                  onClick={() => setManageStep('hold')}
+                                  className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left active:scale-[0.98] transition-transform"
+                                  style={{ background: '#FFFBEB' }}
+                                >
+                                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#FDE68A' }}>
+                                    <PauseCircle className="w-5 h-5" style={{ color: '#92400E' }} />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-[15px] font-bold text-[#78350F]">Hold Plan</p>
+                                    <p className="text-[12px] mt-0.5 text-[#B45309]">Pause indefinitely · plan days freeze · resume anytime</p>
+                                  </div>
+                                  <Pause className="w-4 h-4 text-[#B45309] flex-shrink-0" />
+                                </button>
+
+                                {/* End Subscription */}
+                                <button
+                                  onClick={() => setManageStep('end')}
+                                  className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left active:scale-[0.98] transition-transform"
+                                  style={{ background: '#FFF5F5' }}
+                                >
+                                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#FEE2E2' }}>
+                                    <XCircle className="w-5 h-5 text-[#DC2626]" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-[15px] font-bold text-[#991B1B]">End Subscription</p>
+                                    <p className="text-[12px] mt-0.5 text-[#EF4444]">Cancel · unused days credited to wallet (₹3/day)</p>
+                                  </div>
+                                  <Trash2 className="w-4 h-4 text-[#EF4444] flex-shrink-0" />
+                                </button>
+                              </>)}
                             </div>
                           </>
                         )
@@ -996,16 +1049,20 @@ export default function SubscriptionsScreen() {
                       transition={{ duration: 0.18 }} className="px-4 pb-8"
                     >
                       <div className="rounded-2xl p-4 mb-5 text-center" style={{ background: 'linear-gradient(135deg,#E0F7FA,#BAE6FD)' }}>
-                        <div className="text-[48px] mb-1">🏖️</div>
-                        <p className="text-[15px] font-bold text-[#0C4A6E]">Going somewhere?</p>
+                        <div className="text-[48px] mb-1">{userMode === 'business' ? '🏗️' : '🏖️'}</div>
+                        <p className="text-[15px] font-bold text-[#0C4A6E]">
+                          {userMode === 'business' ? 'Schedule a closure' : 'Going somewhere?'}
+                        </p>
                         <p className="text-[12px] text-[#0891B2] mt-1 leading-relaxed">
-                          Pause deliveries for your trip. Every paused day is automatically added back to your plan.
+                          {userMode === 'business'
+                            ? 'Outlet closing for a holiday or renovation? Set the dates and supply will auto-resume.'
+                            : 'Pause deliveries for your trip. Every paused day is automatically added back to your plan.'}
                         </p>
                       </div>
 
                       <div className="space-y-3 mb-4">
                         <div>
-                          <label className="text-[12px] font-semibold text-[#8E8E93] uppercase tracking-wide">Leaving on</label>
+                          <label className="text-[12px] font-semibold text-[#8E8E93] uppercase tracking-wide">{userMode === 'business' ? 'Closing from' : 'Leaving on'}</label>
                           <input
                             type="date"
                             value={vacFrom}
@@ -1015,7 +1072,7 @@ export default function SubscriptionsScreen() {
                           />
                         </div>
                         <div>
-                          <label className="text-[12px] font-semibold text-[#8E8E93] uppercase tracking-wide">Returning on</label>
+                          <label className="text-[12px] font-semibold text-[#8E8E93] uppercase tracking-wide">{userMode === 'business' ? 'Reopening on' : 'Returning on'}</label>
                           <input
                             type="date"
                             value={vacTo}

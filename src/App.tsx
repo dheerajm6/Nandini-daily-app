@@ -45,6 +45,7 @@ function AnimatedRoutes() {
             <Route path="account" element={<AccountScreen />} />
             <Route path="categories" element={<CategoriesScreen />} />
             <Route path="products/:category" element={<ProductListingScreen />} />
+            <Route path="insights" element={<InsightsScreen />} />
           </Route>
           <Route path="*" element={<Navigate to="/splash" replace />} />
         </Routes>

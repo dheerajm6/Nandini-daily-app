@@ -1,64 +1,247 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, TrendingUp, TrendingDown, Package, Flame, BadgeIndianRupee, CalendarCheck } from 'lucide-react'
+import { ArrowLeft, Flame, Star, Plus, ChevronRight } from 'lucide-react'
+import { useApp } from '../../context/AppContext'
 
-// ── Data ─────────────────────────────────────────────────────────────────────
-type Period = 'Week' | 'Month' | '3M' | '6M'
-const PERIODS: Period[] = ['Week', 'Month', '3M', '6M']
-const PERIOD_LABELS: Record<Period, string> = {
-  Week: 'This Week', Month: 'This Month', '3M': 'Last 3 Months', '6M': 'Last 6 Months',
+// ── All 8 Nandini products ────────────────────────────────────────────────
+interface NProduct {
+  id: number
+  name: string
+  short: string
+  emoji: string
+  benefit: string
+  detail: string
+  used: boolean
+  color: string
+  bg: string
 }
 
-const CHART_DATA: Record<Period, { bars: number[]; labels: string[] }> = {
-  Week:  {
-    bars:   [60, 80, 70, 100, 85, 90, 75],
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+const ALL_PRODUCTS: NProduct[] = [
+  {
+    id: 1, name: 'Full Cream Milk',  short: 'Full Cream', emoji: '🥛',
+    benefit: 'Rich calcium & vitamin D',
+    detail: 'Your daily anchor. 22 mornings strong.',
+    used: true,  color: '#007AFF', bg: '#EBF4FF',
   },
-  Month: {
-    bars:   [55, 70, 60, 85, 75, 90, 65, 80, 70, 95, 85, 75],
-    labels: ['1', '3', '5', '7', '9', '11', '13', '15', '17', '19', '21', '23'],
+  {
+    id: 2, name: 'Toned Milk',       short: 'Toned',      emoji: '🥛',
+    benefit: 'Lighter, same nutrition',
+    detail: 'Great for chai that feels lighter without losing taste.',
+    used: false, color: '#5AC8FA', bg: '#EDF9FF',
   },
-  '3M':  {
-    bars:   [65, 80, 70, 85, 90, 75, 88, 70, 60, 85, 78, 90],
-    labels: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10', 'W11', 'W12'],
+  {
+    id: 3, name: 'Double Toned',     short: 'Dbl Toned',  emoji: '🥛',
+    benefit: 'Low fat, everyday nourishment',
+    detail: 'Perfect for calorie-conscious households.',
+    used: false, color: '#34C759', bg: '#E9FAF0',
   },
-  '6M':  {
-    bars:   [60, 70, 80, 75, 85, 90],
-    labels: ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'],
+  {
+    id: 4, name: 'Fresh Curd',       short: 'Curd',       emoji: '🍶',
+    benefit: 'Billions of live cultures',
+    detail: "Your gut's best ally — and already part of your home.",
+    used: true,  color: '#FF9500', bg: '#FFF5E5',
   },
-}
-
-const STATS: Record<Period, {
-  spend: string; deliveries: number; saved: string; streak: number; trend: number
-}> = {
-  Week:  { spend: '₹476',   deliveries: 7,   saved: '₹84',    streak: 12, trend: +8  },
-  Month: { spend: '₹1,240', deliveries: 18,  saved: '₹220',   streak: 18, trend: +12 },
-  '3M':  { spend: '₹3,680', deliveries: 54,  saved: '₹650',   streak: 18, trend: -3  },
-  '6M':  { spend: '₹7,120', deliveries: 106, saved: '₹1,280', streak: 18, trend: +5  },
-}
-
-const TOP_PRODUCTS = [
-  { name: 'Full Cream Milk 1L', orders: 18, pct: 100, color: '#007AFF', emoji: '🥛' },
-  { name: 'Fresh Curd 400g',    orders: 12, pct: 67,  color: '#FF9500', emoji: '🍶' },
-  { name: 'Pure Ghee 500ml',    orders: 4,  pct: 22,  color: '#FF2D55', emoji: '✨' },
-  { name: 'Table Butter 100g',  orders: 3,  pct: 17,  color: '#34C759', emoji: '🧈' },
+  {
+    id: 5, name: 'Table Butter',     short: 'Butter',     emoji: '🧈',
+    benefit: 'Natural A2 butterfat',
+    detail: 'Richer, purer than any branded spread. Weekend parathas approved.',
+    used: true,  color: '#FFD60A', bg: '#FFFBE5',
+  },
+  {
+    id: 6, name: 'Pure Ghee',        short: 'Ghee',       emoji: '✨',
+    benefit: "A good fat. Ayurveda's gold",
+    detail: 'Butyric acid, brain food, and the secret to every great tadka.',
+    used: true,  color: '#FF6B00', bg: '#FFF2E5',
+  },
+  {
+    id: 7, name: 'Paneer',           short: 'Paneer',     emoji: '🧀',
+    benefit: '18g protein per 100g',
+    detail: 'No gym needed. Add it once a week and feel the difference.',
+    used: false, color: '#FF2D55', bg: '#FFF0F3',
+  },
+  {
+    id: 8, name: 'Skim Milk',        short: 'Skim',       emoji: '🥛',
+    benefit: 'Zero fat, pure protein',
+    detail: "The athlete's milk. Nothing removed except fat.",
+    used: false, color: '#5856D6', bg: '#F0EFFF',
+  },
 ]
 
-const ADDRESS_BREAKDOWN = [
-  { label: 'Home',           city: 'Bengaluru', pct: 60, orders: 11, color: '#007AFF', bg: '#EBF4FF' },
-  { label: "Parents' House", city: 'Mysuru',    pct: 25, orders: 4,  color: '#34C759', bg: '#E9FAF0' },
-  { label: 'In-Laws',        city: 'Bengaluru', pct: 15, orders: 3,  color: '#FF2D55', bg: '#FFF0F3' },
+const USED_COUNT   = ALL_PRODUCTS.filter(p => p.used).length  // 4
+const TOTAL        = ALL_PRODUCTS.length                       // 8
+const STREAK_DAYS  = 22
+const NANDINI_SCORE = 73
+const DISCOVERY    = ALL_PRODUCTS.find(p => p.id === 7)!      // Paneer
+
+const SCORE_PILLARS = [
+  { label: 'Variety',     pct: 50, tip: '4 of 8 discovered', color: '#5AC8FA' },
+  { label: 'Streak',      pct: 73, tip: '22-day ritual',     color: '#34C759' },
+  { label: 'Consistency', pct: 97, tip: '97% deliveries',    color: '#FFD60A' },
 ]
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Animated counter ──────────────────────────────────────────────────────
+function useCounter(target: number, duration = 1500, delay = 500) {
+  const [val, setVal] = useState(0)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const t0 = Date.now()
+      const tick = () => {
+        const p = Math.min((Date.now() - t0) / duration, 1)
+        setVal(Math.round((1 - Math.pow(1 - p, 3)) * target))
+        if (p < 1) requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    }, delay)
+    return () => clearTimeout(t)
+  }, [target, duration, delay])
+  return val
+}
+
+// ── Score ring (SVG) ──────────────────────────────────────────────────────
+function ScoreRing({ score }: { score: number }) {
+  const r    = 54
+  const circ = 2 * Math.PI * r
+  const dash = circ * (1 - score / 100)
+  return (
+    <svg width="136" height="136" viewBox="0 0 136 136" className="absolute inset-0">
+      <defs>
+        <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stopColor="#5AC8FA" />
+          <stop offset="100%" stopColor="#007AFF" />
+        </linearGradient>
+      </defs>
+      {/* Track */}
+      <circle cx="68" cy="68" r={r} fill="none"
+        stroke="rgba(255,255,255,0.12)" strokeWidth="12" />
+      {/* Progress */}
+      <motion.circle
+        cx="68" cy="68" r={r}
+        fill="none"
+        stroke="url(#ringGrad)"
+        strokeWidth="12"
+        strokeLinecap="round"
+        strokeDasharray={circ}
+        initial={{ strokeDashoffset: circ }}
+        animate={{ strokeDashoffset: dash }}
+        transition={{ duration: 1.6, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.4 }}
+        transform="rotate(-90 68 68)"
+      />
+    </svg>
+  )
+}
+
+// ── Constellation ─────────────────────────────────────────────────────────
+function Constellation({
+  selected,
+  onSelect,
+}: {
+  selected: NProduct | null
+  onSelect: (p: NProduct) => void
+}) {
+  const CX = 140, CY = 128, R = 90
+
+  return (
+    <div className="relative mx-auto" style={{ width: 280, height: 256 }}>
+      {/* SVG connector lines from centre to used dots */}
+      <svg className="absolute inset-0 pointer-events-none" width={280} height={256}>
+        {ALL_PRODUCTS.map((p, i) => {
+          if (!p.used) return null
+          const a  = -Math.PI / 2 + i * (2 * Math.PI / TOTAL)
+          const x1 = CX + R * Math.cos(a)
+          const y1 = CY + R * Math.sin(a)
+          return (
+            <line key={i}
+              x1={CX} y1={CY} x2={x1} y2={y1}
+              stroke={p.color}
+              strokeWidth={1.5}
+              strokeOpacity={0.18}
+              strokeDasharray="3 6"
+            />
+          )
+        })}
+      </svg>
+
+      {/* Centre hub */}
+      <div className="absolute" style={{
+        left: CX - 8, top: CY - 8, width: 16, height: 16,
+        borderRadius: '50%',
+        background: 'linear-gradient(135deg, #003B73, #0055A5)',
+        boxShadow: '0 0 16px rgba(0,85,165,0.45)',
+      }} />
+
+      {/* Product dots */}
+      {ALL_PRODUCTS.map((p, i) => {
+        const a   = -Math.PI / 2 + i * (2 * Math.PI / TOTAL)
+        const x   = CX + R * Math.cos(a)
+        const y   = CY + R * Math.sin(a)
+        const sel = selected?.id === p.id
+        return (
+          <motion.button
+            key={p.id}
+            className="absolute flex flex-col items-center gap-[3px]"
+            style={{ left: x - 26, top: y - 27, width: 52 }}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2 + i * 0.07, type: 'spring', stiffness: 280, damping: 22 }}
+            onClick={() => onSelect(p)}
+          >
+            {/* Dot */}
+            <div style={{
+              width: 52, height: 52, borderRadius: 16,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              position: 'relative',
+              background: p.used ? p.bg : '#F2F2F7',
+              border: `2px solid ${sel ? p.color : p.used ? p.color + '35' : '#E5E5EA'}`,
+              boxShadow: sel
+                ? `0 4px 18px ${p.color}50`
+                : p.used ? `0 2px 10px ${p.color}20` : 'none',
+              transition: 'all 0.2s ease',
+            }}>
+              <span style={{
+                fontSize: 22,
+                filter: p.used ? 'none' : 'grayscale(1) opacity(0.28)',
+              }}>
+                {p.emoji}
+              </span>
+              {/* Active indicator */}
+              {p.used && (
+                <div style={{
+                  position: 'absolute', top: -4, right: -4,
+                  width: 11, height: 11, borderRadius: '50%',
+                  border: '2px solid white',
+                  background: p.color,
+                }} />
+              )}
+            </div>
+            {/* Label */}
+            <p style={{
+              fontSize: 8,
+              fontWeight: 600,
+              color: p.used ? '#3C3C43' : '#AEAEB2',
+              textAlign: 'center',
+              lineHeight: 1.2,
+              maxWidth: 52,
+            }}>
+              {p.short}
+            </p>
+          </motion.button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Main Screen ───────────────────────────────────────────────────────────
 export default function InsightsScreen() {
-  const navigate = useNavigate()
-  const [period, setPeriod] = useState<Period>('Month')
+  const navigate    = useNavigate()
+  const { userName } = useApp()
+  const displayScore = useCounter(NANDINI_SCORE)
+  const [selected, setSelected] = useState<NProduct | null>(null)
 
-  const stats  = STATS[period]
-  const chart  = CHART_DATA[period]
-  const maxBar = Math.max(...chart.bars)
+  function handleTap(p: NProduct) {
+    setSelected(prev => prev?.id === p.id ? null : p)
+  }
 
   return (
     <motion.div
@@ -68,7 +251,7 @@ export default function InsightsScreen() {
       exit={{ x: '100%' }}
       transition={{ type: 'spring', stiffness: 380, damping: 36 }}
     >
-      {/* ── Header ─────────────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="bg-white flex-shrink-0"
         style={{ boxShadow: '0 1px 0 rgba(0,0,0,0.06)' }}>
         <div className="flex items-center gap-3 px-4 safe-top pb-3 pt-4">
@@ -79,254 +262,371 @@ export default function InsightsScreen() {
             <ArrowLeft className="w-5 h-5 text-brand-blue" />
           </button>
           <div className="flex-1">
-            <h1 className="text-[18px] font-bold text-[#1C1C1E] tracking-[-0.3px]">Insights</h1>
-            <p className="text-[12px] text-ios-gray-1">Your delivery & spend summary</p>
+            <h1 className="text-[18px] font-bold text-[#1C1C1E] tracking-[-0.3px]">
+              Your Nandini Journey
+            </h1>
+            <p className="text-[12px] text-ios-gray-1">February 2026</p>
           </div>
-        </div>
-
-        {/* Period tabs */}
-        <div className="flex px-4 pb-3 gap-2">
-          {PERIODS.map(p => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className="flex-1 py-2 rounded-xl text-[13px] font-semibold transition-all"
-              style={{
-                background: period === p ? '#0055A5' : '#F2F2F7',
-                color:      period === p ? 'white'   : '#8E8E93',
-              }}
-            >
-              {p}
-            </button>
-          ))}
         </div>
       </div>
 
-      {/* ── Scrollable content ────────────────────────────────────────── */}
+      {/* ── Scrollable body ──────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-10">
 
-        {/* ── Hero Summary Card ──────────────────────────────────── */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={period}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22 }}
-            className="ios-card mb-4 overflow-hidden p-0"
-          >
-            {/* Top section — big spend */}
-            <div className="px-5 pt-5 pb-4"
-              style={{ background: 'linear-gradient(135deg, #0055A5 0%, #0077CC 100%)' }}>
-              <p className="text-[12px] font-semibold uppercase tracking-[0.5px] mb-1"
-                style={{ color: 'rgba(255,255,255,0.6)' }}>
-                {PERIOD_LABELS[period]}
-              </p>
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-[38px] font-bold text-white leading-none tracking-[-1px]">
-                    {stats.spend}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* 1. NANDINI SCORE                                           */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="ios-card mb-4 p-0 overflow-hidden"
+        >
+          {/* Gradient top */}
+          <div className="px-5 pt-5 pb-5"
+            style={{ background: 'linear-gradient(150deg, #002F5F 0%, #0055A5 100%)' }}>
+
+            <p className="text-[10px] font-bold uppercase tracking-[1px] mb-4"
+              style={{ color: 'rgba(255,255,255,0.4)' }}>
+              Nandini Score — Feb 2026
+            </p>
+
+            {/* Ring + headline */}
+            <div className="flex items-center gap-5 mb-5">
+              <div className="relative w-[136px] h-[136px] flex-shrink-0">
+                <ScoreRing score={NANDINI_SCORE} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <p className="text-[40px] font-bold text-white leading-none tracking-[-1.5px]">
+                    {displayScore}
                   </p>
-                  <p className="text-[12px] mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                    Total spend
+                  <p className="text-[10px] font-semibold mt-0.5"
+                    style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    out of 100
                   </p>
                 </div>
-                {/* Trend badge */}
-                <div className="flex items-center gap-1 px-3 py-1.5 rounded-full mb-1"
-                  style={{
-                    background: stats.trend >= 0
-                      ? 'rgba(255,59,48,0.2)'
-                      : 'rgba(52,199,89,0.2)',
-                  }}>
-                  {stats.trend >= 0
-                    ? <TrendingUp style={{ width: 13, height: 13, color: '#FF6B6B' }} />
-                    : <TrendingDown style={{ width: 13, height: 13, color: '#34C759' }} />
-                  }
-                  <span className="text-[12px] font-bold"
-                    style={{ color: stats.trend >= 0 ? '#FF6B6B' : '#34C759' }}>
-                    {stats.trend >= 0 ? '+' : ''}{stats.trend}%
-                  </span>
-                </div>
               </div>
-            </div>
 
-            {/* Bottom stats row */}
-            <div className="flex divide-x divide-[#F0F0F0] bg-white">
-              {[
-                { Icon: Package,          val: `${stats.deliveries}`,    label: 'Deliveries', color: '#34C759' },
-                { Icon: BadgeIndianRupee, val: stats.saved,               label: 'You Saved',  color: '#FF9500' },
-                { Icon: Flame,            val: `${stats.streak}d`,        label: 'Streak',     color: '#FF2D55' },
-              ].map((s, i) => {
-                const Icon = s.Icon
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center py-3.5 gap-1">
-                    <Icon style={{ width: 16, height: 16, color: s.color }} />
-                    <p className="text-[15px] font-bold text-[#1C1C1E] leading-none">{s.val}</p>
-                    <p className="text-[10px] text-ios-gray-1 font-medium">{s.label}</p>
-                  </div>
-                )
-              })}
-            </div>
-          </motion.div>
-        </AnimatePresence>
-
-        {/* ── Activity Chart ─────────────────────────────────────── */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`chart-${period}`}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.22, delay: 0.05 }}
-            className="ios-card mb-4"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-[14px] font-bold text-[#1C1C1E]">Delivery Activity</p>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
-                style={{ background: '#E9FAF0' }}>
-                <CalendarCheck style={{ width: 12, height: 12, color: '#34C759' }} />
-                <span className="text-[11px] font-bold text-[#34C759]">97% success</span>
-              </div>
-            </div>
-
-            {/* Bar chart */}
-            <div className="flex items-end gap-1.5 mb-2" style={{ height: 80 }}>
-              {chart.bars.map((val, i) => {
-                const isLast = i === chart.bars.length - 1
-                const heightPx = Math.max(4, (val / maxBar) * 80)
-                return (
-                  <motion.div
-                    key={`${period}-bar-${i}`}
-                    className="flex-1 rounded-lg"
-                    initial={{ height: 0 }}
-                    animate={{ height: heightPx }}
-                    transition={{ delay: i * 0.03, duration: 0.4, ease: 'easeOut' }}
-                    style={{
-                      background: isLast
-                        ? 'linear-gradient(180deg, #0077CC, #0055A5)'
-                        : 'linear-gradient(180deg, #C7DCFF, #D8E8FF)',
-                      minWidth: 0,
-                    }}
-                  />
-                )
-              })}
-            </div>
-
-            {/* X-axis labels */}
-            <div className="flex gap-1.5">
-              {chart.labels.map((l, i) => (
-                <p key={i} className="flex-1 text-center text-[9px] font-medium text-ios-gray-1">
-                  {l}
+              <div className="flex-1">
+                <p className="text-[18px] font-bold text-white leading-snug tracking-[-0.4px]">
+                  Growing steady,<br />{userName}
                 </p>
+                <p className="text-[12px] mt-1.5 leading-snug"
+                  style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  You're 7 points from 80.
+                </p>
+                <div className="mt-3 flex items-center gap-1.5 px-3 py-2 rounded-xl"
+                  style={{ background: 'rgba(255,255,255,0.1)' }}>
+                  <span className="text-[13px]">🧀</span>
+                  <p className="text-[11px] font-semibold"
+                    style={{ color: 'rgba(255,255,255,0.8)' }}>
+                    Add Paneer → jump to 80
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Score pillars */}
+            <div className="space-y-3">
+              {SCORE_PILLARS.map(s => (
+                <div key={s.label}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[11px] font-semibold"
+                      style={{ color: 'rgba(255,255,255,0.5)' }}>
+                      {s.label}
+                    </p>
+                    <p className="text-[11px] font-bold"
+                      style={{ color: 'rgba(255,255,255,0.8)' }}>
+                      {s.tip}
+                    </p>
+                  </div>
+                  <div className="h-[6px] rounded-full"
+                    style={{ background: 'rgba(255,255,255,0.1)' }}>
+                    <motion.div
+                      className="h-full rounded-full"
+                      style={{ background: s.color }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${s.pct}%` }}
+                      transition={{ delay: 0.9, duration: 0.9, ease: 'easeOut' }}
+                    />
+                  </div>
+                </div>
               ))}
             </div>
-          </motion.div>
-        </AnimatePresence>
-
-        {/* ── Top Products ───────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="ios-card mb-4"
-        >
-          <p className="text-[14px] font-bold text-[#1C1C1E] mb-4">Most Ordered</p>
-          <div className="space-y-4">
-            {TOP_PRODUCTS.map((p, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className="text-[22px] flex-shrink-0 w-8 text-center">{p.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-[13px] font-semibold text-[#1C1C1E] truncate pr-2">{p.name}</p>
-                    <span className="text-[12px] font-bold flex-shrink-0"
-                      style={{ color: p.color }}>
-                      {p.orders}×
-                    </span>
-                  </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: '#F2F2F7' }}>
-                    <motion.div
-                      className="h-full rounded-full"
-                      style={{ background: p.color }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${p.pct}%` }}
-                      transition={{ delay: 0.12 + i * 0.06, duration: 0.5, ease: 'easeOut' }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </motion.div>
 
-        {/* ── Deliveries by Address ──────────────────────────────── */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* 2. PRODUCT CONSTELLATION                                   */}
+        {/* ═══════════════════════════════════════════════════════════ */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
+          initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="ios-card mb-4"
+          transition={{ delay: 0.1, duration: 0.4 }}
+          className="ios-card mb-4 p-0 overflow-hidden"
         >
-          <p className="text-[14px] font-bold text-[#1C1C1E] mb-4">Deliveries by Address</p>
-          <div className="space-y-3">
-            {ADDRESS_BREAKDOWN.map((a, i) => (
-              <div key={i} className="flex items-center gap-3">
-                {/* Icon dot */}
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: a.bg }}>
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: a.color }} />
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div>
-                      <p className="text-[13px] font-semibold text-[#1C1C1E] leading-none">{a.label}</p>
-                      <p className="text-[10px] text-ios-gray-1 mt-0.5">{a.city}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[13px] font-bold leading-none" style={{ color: a.color }}>{a.pct}%</p>
-                      <p className="text-[10px] text-ios-gray-1 mt-0.5">{a.orders} orders</p>
-                    </div>
-                  </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: '#F2F2F7' }}>
-                    <motion.div
-                      className="h-full rounded-full"
-                      style={{ background: a.color }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${a.pct}%` }}
-                      transition={{ delay: 0.18 + i * 0.07, duration: 0.5, ease: 'easeOut' }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* ── Savings Card ───────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="ios-card overflow-hidden p-0"
-        >
-          <div className="px-5 py-5"
-            style={{ background: 'linear-gradient(135deg, #065F46 0%, #059669 100%)' }}>
-            <p className="text-[11px] font-bold uppercase tracking-[0.8px] mb-2"
-              style={{ color: 'rgba(255,255,255,0.55)' }}>
-              You've saved vs retail prices
-            </p>
-            <p className="text-[36px] font-bold text-white leading-none tracking-[-1px]">
-              {stats.saved}
-            </p>
-            <p className="text-[13px] mt-2" style={{ color: 'rgba(255,255,255,0.7)' }}>
-              by subscribing instead of buying retail
-            </p>
-            <div className="mt-4 flex items-center gap-2 px-3 py-2 rounded-xl"
-              style={{ background: 'rgba(255,255,255,0.15)' }}>
-              <span className="text-[13px]">💡</span>
-              <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.85)' }}>
-                Keep your streak going — you're saving more each month!
+          {/* Card header */}
+          <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+            <div>
+              <p className="text-[14px] font-bold text-[#1C1C1E]">Your Nandini Home</p>
+              <p className="text-[12px] text-ios-gray-1 mt-0.5">
+                {USED_COUNT} of {TOTAL} products in your home
+              </p>
+            </div>
+            <div className="flex items-center gap-1 px-3 py-1.5 rounded-full"
+              style={{ background: '#EBF4FF' }}>
+              <Star style={{ width: 11, height: 11, color: '#007AFF' }} />
+              <p className="text-[12px] font-bold text-brand-blue ml-0.5">
+                {USED_COUNT}/{TOTAL}
               </p>
             </div>
           </div>
+
+          {/* Constellation */}
+          <Constellation selected={selected} onSelect={handleTap} />
+
+          {/* Tooltip / hint */}
+          <div className="px-4 pb-5" style={{ minHeight: 68 }}>
+            <AnimatePresence mode="wait">
+              {selected ? (
+                <motion.div
+                  key={selected.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18 }}
+                  className="rounded-2xl px-4 py-3 flex items-center gap-3"
+                  style={{
+                    background: selected.bg,
+                    border: `1px solid ${selected.color}25`,
+                  }}
+                >
+                  <span style={{ fontSize: 26 }}>{selected.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-[13px] font-bold text-[#1C1C1E]">
+                        {selected.name}
+                      </p>
+                      {selected.used && (
+                        <div className="px-1.5 py-0.5 rounded-full"
+                          style={{ background: selected.color + '20' }}>
+                          <p className="text-[9px] font-bold"
+                            style={{ color: selected.color }}>
+                            IN HOME
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[12px] text-ios-gray-1 leading-tight mt-0.5">
+                      {selected.detail}
+                    </p>
+                  </div>
+                  {!selected.used && (
+                    <button
+                      className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl"
+                      style={{ background: selected.color }}>
+                      <Plus style={{ width: 11, height: 11, color: 'white' }} />
+                      <p className="text-[11px] font-bold text-white">Add</p>
+                    </button>
+                  )}
+                </motion.div>
+              ) : (
+                <motion.p
+                  key="hint"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="text-[12px] text-center py-3"
+                  style={{ color: '#AEAEB2' }}
+                >
+                  Tap any product to learn more ·{' '}
+                  <span style={{ color: '#C7C7CC' }}>
+                    {TOTAL - USED_COUNT} left to discover
+                  </span>
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* 3. STREAK  +  DISCOVERY  (side by side)                   */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        <div className="flex gap-3 mb-4">
+
+          {/* Streak */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="flex-1 ios-card p-0 overflow-hidden"
+          >
+            <div className="px-4 pt-4 pb-3"
+              style={{ background: 'linear-gradient(145deg, #FF5E00, #FF9500)' }}>
+              <Flame className="text-white mb-2" style={{ width: 22, height: 22 }} />
+              <p className="text-[42px] font-bold text-white leading-none tracking-[-2px]">
+                {STREAK_DAYS}
+              </p>
+              <p className="text-[11px] font-semibold mt-1"
+                style={{ color: 'rgba(255,255,255,0.65)' }}>
+                morning streak
+              </p>
+            </div>
+            <div className="px-4 py-3 bg-white">
+              <p className="text-[12px] font-bold text-[#1C1C1E]">Daily ritual built</p>
+              <p className="text-[11px] text-ios-gray-1 mt-0.5 leading-snug">
+                Fresh dairy, every morning. Don't break it.
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Discovery */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="flex-1 ios-card p-0 overflow-hidden"
+          >
+            <div className="px-4 pt-4 pb-4 bg-white">
+              <div className="flex items-center gap-1 mb-2">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#FF2D55' }} />
+                <p className="text-[10px] font-bold uppercase tracking-[0.6px]"
+                  style={{ color: '#FF2D55' }}>
+                  Not discovered
+                </p>
+              </div>
+              <span style={{ fontSize: 34 }}>{DISCOVERY.emoji}</span>
+              <p className="text-[14px] font-bold text-[#1C1C1E] mt-1 leading-tight">
+                {DISCOVERY.name}
+              </p>
+              <p className="text-[11px] text-ios-gray-1 mt-1 leading-snug">
+                {DISCOVERY.benefit}
+              </p>
+              <button
+                className="mt-3 w-full py-2 rounded-xl flex items-center justify-center gap-1.5"
+                style={{
+                  background: '#FFF0F3',
+                  border: '1px solid rgba(255,45,85,0.2)',
+                }}
+              >
+                <Plus style={{ width: 11, height: 11, color: '#FF2D55' }} />
+                <p className="text-[12px] font-bold" style={{ color: '#FF2D55' }}>
+                  Add to home
+                </p>
+              </button>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* 4. KITCHEN STORY                                           */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="ios-card mb-4 p-0 overflow-hidden"
+        >
+          <div className="px-5 pt-5 pb-5"
+            style={{ background: 'linear-gradient(150deg, #FFFCF0 0%, #FFF8E1 100%)' }}>
+
+            <p className="text-[10px] font-bold uppercase tracking-[0.8px] mb-3"
+              style={{ color: '#FF9500' }}>
+              🏠 {userName}'s kitchen this month
+            </p>
+
+            <p className="text-[15px] text-[#1C1C1E] leading-relaxed font-medium">
+              Your home had fresh milk on{' '}
+              <span className="font-bold" style={{ color: '#007AFF' }}>22 mornings</span>,
+              gut-friendly curd through the week, golden ghee in every tadka, and butter on
+              those weekend parathas.{' '}
+              <span className="font-bold" style={{ color: '#FF9500' }}>
+                A proper Nandini kitchen.
+              </span>
+            </p>
+
+            {/* Nudge */}
+            <div className="mt-4 flex items-start gap-2.5 rounded-2xl px-3.5 py-3"
+              style={{ background: 'rgba(255,149,0,0.1)' }}>
+              <span className="text-[15px] mt-0.5">💡</span>
+              <div className="flex-1">
+                <p className="text-[12px] leading-snug" style={{ color: '#CC6600' }}>
+                  Add Paneer this month and your kitchen unlocks{' '}
+                  <span className="font-bold">4 more dishes</span> — palak paneer, paneer
+                  butter masala, bhurji & more.
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* 5. CATEGORY BALANCE                                        */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="ios-card mb-2"
+        >
+          <p className="text-[14px] font-bold text-[#1C1C1E] mb-4">Home Balance</p>
+
+          {[
+            {
+              cat: 'Liquid Dairy',   emoji: '🥛', covered: 1, total: 4,
+              color: '#007AFF', bg: '#EBF4FF',
+              note: 'Full Cream covered. Toned, Dbl Toned & Skim await.',
+            },
+            {
+              cat: 'Fermented',      emoji: '🍶', covered: 1, total: 1,
+              color: '#FF9500', bg: '#FFF5E5',
+              note: 'Curd on point. Your gut is happy.',
+            },
+            {
+              cat: 'Good Fats',      emoji: '✨', covered: 2, total: 2,
+              color: '#FF6B00', bg: '#FFF2E5',
+              note: 'Butter + Ghee. Full marks.',
+            },
+            {
+              cat: 'Protein',        emoji: '🧀', covered: 0, total: 1,
+              color: '#FF2D55', bg: '#FFF0F3',
+              note: 'Paneer missing. Add it to complete this.',
+            },
+          ].map((row, i) => {
+            const pct = Math.round((row.covered / row.total) * 100)
+            return (
+              <div key={i} className="mb-4 last:mb-0">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                      style={{ background: row.bg }}>
+                      <span style={{ fontSize: 16 }}>{row.emoji}</span>
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-semibold text-[#1C1C1E] leading-none">
+                        {row.cat}
+                      </p>
+                      <p className="text-[10px] text-ios-gray-1 mt-0.5">{row.note}</p>
+                    </div>
+                  </div>
+                  <p className="text-[13px] font-bold flex-shrink-0 ml-2"
+                    style={{ color: pct === 100 ? '#34C759' : row.color }}>
+                    {row.covered}/{row.total}
+                  </p>
+                </div>
+                <div className="h-2 rounded-full ml-10"
+                  style={{ background: '#F2F2F7' }}>
+                  <motion.div
+                    className="h-full rounded-full"
+                    style={{ background: pct === 100 ? '#34C759' : row.color }}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ delay: 0.4 + i * 0.1, duration: 0.7, ease: 'easeOut' }}
+                  />
+                </div>
+              </div>
+            )
+          })}
         </motion.div>
 
       </div>

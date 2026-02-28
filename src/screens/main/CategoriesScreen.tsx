@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
+import { useApp } from '../../context/AppContext'
 
 const ALL_CATEGORIES = [
   { id: 'milk',           name: 'Milk',               file: 'milk.png',                 bg: '#EBF5FF' },
@@ -25,6 +26,11 @@ const ALL_CATEGORIES = [
 
 export default function CategoriesScreen() {
   const navigate = useNavigate()
+  const { userMode, enabledCategories } = useApp()
+
+  const visibleCats = userMode === 'business'
+    ? ALL_CATEGORIES.filter(c => enabledCategories.includes(c.id))
+    : ALL_CATEGORIES
 
   return (
     <motion.div
@@ -45,13 +51,22 @@ export default function CategoriesScreen() {
         >
           <ArrowLeft className="w-5 h-5 text-brand-blue" />
         </button>
-        <h1 className="text-[18px] font-bold text-[#1C1C1E] tracking-[-0.3px]">All Categories</h1>
+        <div>
+          <h1 className="text-[18px] font-bold text-[#1C1C1E] tracking-[-0.3px]">
+            {userMode === 'business' ? 'Supply Categories' : 'All Categories'}
+          </h1>
+          {userMode === 'business' && (
+            <p className="text-[11px] mt-0.5" style={{ color: '#8E8E93' }}>
+              {visibleCats.length} categories · manage in Account
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Grid */}
       <div className="flex-1 overflow-y-auto px-4 pt-4" style={{ paddingBottom: 'calc(83px + 16px)' }}>
         <div className="grid grid-cols-3 gap-3">
-          {ALL_CATEGORIES.map((cat, i) => (
+          {visibleCats.map((cat, i) => (
             <motion.button
               key={cat.name}
               initial={{ opacity: 0, scale: 0.88 }}
